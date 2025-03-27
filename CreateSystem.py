@@ -1,16 +1,29 @@
+import pandas as pd
+
+
 def fixbuses(buses, sections):
-    for i, row in buses.iterrows():
-        up = 0
-        down = []
-        for j, row2 in sections.iterrows():
-            if sections['Upstream Bus'][j] == i:
-                down.append(j)
-            if sections['Downstream Bus'][j] == i:
-                up = j
-        buses['Upstream Section'][i] = up
-        buses['Downstream Sections'][i] = down
-        buses['Connected Sections'][i] = down.copy()
-        buses['Connected Sections'][i].append(up)
+    """
+    Updates the buses DataFrame with upstream, downstream, and connected sections.
+
+    Args:
+        buses (DataFrame): Data about buses in the system.
+        sections (DataFrame): Data about sections in the system.
+
+    Returns:
+        DataFrame: Updated buses DataFrame.
+    """
+    for bus_id, _ in buses.iterrows():
+        upstream_section = 0
+        downstream_sections = []
+        for section_id, _ in sections.iterrows():
+            if sections['Upstream Bus'][section_id] == bus_id:
+                downstream_sections.append(section_id)
+            if sections['Downstream Bus'][section_id] == bus_id:
+                upstream_section = section_id
+        buses['Upstream Section'][bus_id] = upstream_section
+        buses['Downstream Sections'][bus_id] = downstream_sections
+        buses['Connected Sections'][bus_id] = downstream_sections.copy()
+        buses['Connected Sections'][bus_id].append(upstream_section)
     return buses
 
 
@@ -25,3 +38,41 @@ def calcFailRates(sections, components):
         sections['s'][i] = components['s'][sections['Cable Type'][i]]
         sections['Components'][i] = secComponents
     return sections
+
+def createSystem(file_path):
+    """
+    Creates the system by reading data from Excel files.
+
+    Args:
+        file_path (str): Path to the Excel file containing system data.
+
+    Returns:
+        dict: A dictionary containing data about buses, sections, loads, components, backup feeders, and generation.
+    """
+    system = {}
+    # Load data for buses, sections, loads, components, backup feeders, and generation
+    system['buses'] = pd.read_excel(file_path, 'Bus Data', index_col=0)
+    system['sections'] = pd.read_excel(file_path, 'Line Data', index_col=0)
+    system['loads'] = pd.read_excel(file_path, 'Load Point Data', index_col=0)
+    system['components'] = pd.read_excel(file_path, 'Component Data', index_col=0)
+    system['backupFeeders'] = pd.read_excel(file_path, 'Backup Feeders', index_col=0)
+    system['generationData'] = pd.read_excel(file_path, 'Generation Data', index_col=0)
+
+    # Initialize columns for buses and sections
+    system['buses']['Upstream Section'] = str(0)
+    system['buses']['Downstream Sections'] = [list() for _ in range(len(system['buses'].index))]
+    system['buses']['Connected Sections'] = [list() for _ in range(len(system['buses'].index))]
+    system['sections']['s'] = float(0)
+    system['sections']['Components'] = {}
+
+    # Initialize columns for loads
+    system['loads']['U'] = float(0)
+    system['loads']['nrOfFaults'] = int(0)
+    system['loads']['R'] = float(0)
+    system['loads']['Lambda'] = float(0)
+
+    # Fix buses and calculate failure rates
+    system['buses'] = fixbuses(system['buses'], system['sections'])
+    system['sections'] = calcFailRates(system['sections'], system['components'])
+
+    return system
