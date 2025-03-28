@@ -78,9 +78,8 @@ def RELRAD(loc, outFile):
     results = pd.DataFrame(index=componentList, columns=LPs)
 
     # Iterate through each section and component to calculate effects on load points
-    for sec, row in system['sections'].iterrows():
+    for sec in system['sections'].index:
         for comp in system['sections']['Components'][sec]:
-            print(sec, comp)
             # Create deep copies of the original data for analysis
             sectionsCopy = pd.DataFrame(columns=system['sections'].columns,
                                         data=copy.deepcopy(system['sections'].values),

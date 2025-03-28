@@ -24,7 +24,7 @@ def RELRAD(loc, outFile):
     '''
     # Create a list of all components in the system
     componentList = []
-    for sec, row in system['sections'].iterrows():
+    for sec in system['sections'].index:
         for comp in system['sections']['Components'][sec]:
             componentTag = sec + comp
             componentList.append(componentTag)

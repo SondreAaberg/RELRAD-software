@@ -2,8 +2,6 @@ import pandas as pd
 import GraphSearch as gs
 import MiscFunctions as mf
 
-
-
 def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, RNG=False):
     """
     Calculates the effects of a fault on the system.
@@ -22,23 +20,29 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
     Returns:
         dict: Effects of the fault on load points.
     """
+    # Initialize a list to store the effects on sections
     effectsOnSections = []
 
-    buses, sections, trippedProtection, fullSystemDown = tripProtection(fault, buses, sections)
+    # Trip protection devices and check if the entire system is down
+    buses, sections, trippedProtection, fullSystemDown = gs.tripProtection(fault, buses, sections)
 
+    # If the entire system is down, return fault duration for all load points
     if fullSystemDown:
         effectsOnLPs = {}
         for i, row in loads.iterrows():
             effectsOnLPs[i] = r
         return effectsOnLPs
 
-    buses, sections, disconnectors = disconnect(fault, buses, sections)
+    # Isolate the faulted section and identify disconnectors
+    buses, sections, disconnectors = gs.disconnect(fault, buses, sections)
 
+    # Determine the maximum switching time among disconnectors
     s = 0
     for i in disconnectors:
         if i['s'] > s:
             s = i['s']
 
+    # Calculate switching times for each bus
     switchingTimes = {}
     for i in disconnectors:
         if i['fromBus'] not in switchingTimes:
@@ -52,61 +56,70 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
             if i['s'] > switchingTimes[i['toBus']]:
                 switchingTimes[i['toBus']] = i['s']
 
-    disconnectedSections = findConnectedSegments(buses, sections)
+    # Identify all isolated interconnections in the system
+    disconnectedSections = gs.findConnectedSegments(buses, sections)
 
+    # Record the effects on disconnected sections
     for i in disconnectedSections:
         effectsOnSections.append({
             'state': 'tripped',
-            'loads': findLoadPoints(i, loads),
-            'time': switchingTime(i, switchingTimes)
+            'loads': gs.findLoadPoints(i, loads),
+            'time': gs.switchingTime(i, switchingTimes)
         })
 
-    buses, sections = reconnectProtection(buses, sections, trippedProtection, fault)
+    # Reconnect protection devices and update the system state
+    buses, sections = gs.reconnectProtection(buses, sections, trippedProtection, fault)
 
-    disconnectedSections = findConnectedSegments(buses, sections)
+    # Identify disconnected sections again after reconnection
+    disconnectedSections = gs.findConnectedSegments(buses, sections)
 
     for i in disconnectedSections:
         if sections['Upstream Bus'][fault] in i or sections['Downstream Bus'][fault] in i:
+            # Faulted section
             effectsOnSections.append({
                 'state': 'fault',
-                'loads': findLoadPoints(i, loads),
+                'loads': gs.findLoadPoints(i, loads),
                 'time': r
             })
-        elif mainPower(i[0], buses, sections, generationData):
+        elif gs.mainPower(i[0], buses, sections, generationData):
+            # Section connected to the main power source
             effectsOnSections.append({
                 'state': 'connected',
-                'loads': findLoadPoints(i, loads),
+                'loads': gs.findLoadPoints(i, loads),
                 'time': 0
             })
         else:
-            connectedBackup = findBackupFeeders(i, backupFeeders)
+            # Check for backup feeders
+            connectedBackup = gs.findBackupFeeders(i, backupFeeders)
             if connectedBackup:
                 for j in connectedBackup:
-                    if mainPower(j['otherEnd'], buses, sections, generationData):
-                        breaker = findProtection(j['otherEnd'], buses, sections)
+                    if gs.mainPower(j['otherEnd'], buses, sections, generationData):
+                        breaker = gs.findProtection(j['otherEnd'], buses, sections)
                         effectsOnSections.append({
                             'state': 'backupPower',
-                            'loads': findLoadPoints(i, loads),
+                            'loads': gs.findLoadPoints(i, loads),
                             'time': backupFeeders['s'][j['backupFeeder']]
                         })
                         if breaker['direction'] == 'D':
                             endBus = sections['Upstream Bus'][breaker['section']]
                         else:
                             endBus = breaker['bus']
-                        connected = connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
+                        connected = gs.connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
                         effectsOnSections.append({
                             'state': 'backup',
-                            'loads': findLoadPoints(connected, loads),
+                            'loads': gs.findLoadPoints(connected, loads),
                             'time': s
                         })
                         break
             else:
+                # No backup feeder available
                 effectsOnSections.append({
                     'state': 'noBackup',
-                    'loads': findLoadPoints(i, loads),
+                    'loads': gs.findLoadPoints(i, loads),
                     'time': r
                 })
 
+    # Aggregate the effects on load points
     effectsOnLPs = {}
     for i in effectsOnSections:
         for LP in i['loads']:
@@ -121,4 +134,5 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                 else:
                     effectsOnLPs[LP] = i['time']
 
+    # Return the final effects on load points
     return effectsOnLPs

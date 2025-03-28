@@ -57,13 +57,13 @@ def GenerateHistory (l, r):
 
 
 def minTTF(history):
-            TTFcomponent = next(iter(history))
-            TTF = history[TTFcomponent]['TTF']
-            for secComp in history:
-                if history[secComp]['TTF'] < TTF:
-                    TTFcomponent = secComp
-                    TTF = history[secComp]['TTF']
-            return TTFcomponent
+    TTFcomponent = next(iter(history))
+    TTF = history[TTFcomponent]['TTF']
+    for secComp in history:
+        if history[secComp]['TTF'] < TTF:
+            TTFcomponent = secComp
+            TTF = history[secComp]['TTF']
+    return TTFcomponent
 
 
 def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders):
@@ -73,7 +73,7 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
         results[i] = {'nrOfFaults': 0, 'U': 0}
     history = {}
         # Generate failure history for each component
-    for sec, row in sectionsOriginal.iterrows():
+    for sec in sectionsOriginal.index:
         for comp in sectionsOriginal['Components'][sec]:
             TTF, TTR = GenerateHistory(sectionsOriginal['Components'][sec][comp]['lambda'], sectionsOriginal['Components'][sec][comp]['r'])
             history[sec + comp] = {
