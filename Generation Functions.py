@@ -26,4 +26,12 @@ def distributedGeneration(loads, generation, connection, u):
         else:
             return u
             
+
+def distributedGenerationRNG(loads, generation, connection, u):
+
+def PV():
+
+def WP():
+
+def BESS():
         

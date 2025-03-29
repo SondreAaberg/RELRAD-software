@@ -4,20 +4,37 @@ import random as rng
 import GraphSearch as gs
 import MiscFunctions as mf
 import CreateSystem as cs
+import VarianceCalculations as vc
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
 
-def MonteCarlo(loc, n, outFile):
+def MonteCarlo(loc, outFile, beta = 0.005, nCap = 0):
     # Load data from Excel files and create the system
     system = cs.createSystem(loc)
     
     h = 8736  # Total hours in a year
+    # Perform Monte Carlo simulation for 400 years to find variance of EENS (multithreaded)
+    n1 = 400
+    EENS = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(mf.MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders']) for year in range(n1)]
 
+        for future in futures:
+            yealyEENS = 0
+            results = future.result()
+            for LP in results:
+                yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
+            EENS.append(yealyEENS)
+
+    n2 = vc.calcNumberOfSimulations(EENS, beta)  # Calculate number of simulations needed for desired variance
+    if nCap > 0 and n2 > nCap:
+        n2 = nCap
+    
 
     # Perform Monte Carlo simulation for n years (multithreaded)
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(mf.MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders']) for year in range(n)]
+        futures = [executor.submit(mf.MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders']) for year in range(n2)]
 
         for future in futures:
             results = future.result()
@@ -28,8 +45,8 @@ def MonteCarlo(loc, n, outFile):
 
     # Calculate average failure rate and unavailability for each load point
     for LP in system['loads'].index:
-        system['loads'].at[LP, 'Lambda'] = system['loads'].at[LP, 'nrOfFaults'] / n
-        system['loads'].at[LP, 'U']/= n
+        system['loads'].at[LP, 'Lambda'] = system['loads'].at[LP, 'nrOfFaults'] / 2
+        system['loads'].at[LP, 'U']/= 2
 
     system['loads']['R'] = system['loads']['U'] / system['loads']['Lambda']
     system['loads']['SAIFI'] = system['loads']['Lambda'] * system['loads']['Number of customers']
