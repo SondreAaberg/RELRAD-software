@@ -12,16 +12,20 @@ def var(EENS):
     """
 
     meanEENS = np.mean(EENS)
-    var = 1/len(EENS)*(len(EENS)-1)*np.sum((EENS-meanEENS)**2)
+
+    var = np.sum((EENS-meanEENS)**2)/(len(EENS)-1)
     return var
 
-def calcNumberOfSimulations(beta, EENS):
+def calcNumberOfSimulations(EENS, beta):
     # Calculate the number of simulations needed to achieve the desired precision
 
     meanEENS = np.mean(EENS)
     varEENS = var(EENS)
 
-    n = (beta * np.sqrt(varEENS) / meanEENS) ** 2
+    print('meanEENS', meanEENS)
+    print('varEENS', varEENS)
+
+    n = ( np.sqrt(varEENS) / (beta * meanEENS)) ** 2
     n = int(np.ceil(n))
 
     return n

@@ -55,7 +55,7 @@ def fixbuses(buses, sections):
     for bus in buses.index:
         upstream_section = 0
         downstream_sections = []
-        for section, _ in sections.index:
+        for section in sections.index:
             if sections['Upstream Bus'][section] == bus:
                 downstream_sections.append(section)
             if sections['Downstream Bus'][section] == bus:

@@ -2,7 +2,7 @@ import pandas as pd
 import GraphSearch as gs
 import MiscFunctions as mf
 
-def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, RNG=False):
+def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, DSEBF = True, RNG=False):
     """
     Calculates the effects of a fault on the system.
 
@@ -15,11 +15,13 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
         generationData (DataFrame): Data about generation in the system.
         backupFeeders (DataFrame): Data about backup feeders in the system.
         r (int): The fault duration.
+        DSEBF (bool, optional): (Down Stream Effect of Backup Feeder) Flag indicating if backup feeders creates a outage on  the secondry side.
         RNG (bool, optional): Flag indicating if random number generation is used. Defaults to False.
 
     Returns:
         dict: Effects of the fault on load points.
     """
+
     # Initialize a list to store the effects on sections
     effectsOnSections = []
 
@@ -100,16 +102,17 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                             'loads': gs.findLoadPoints(i, loads),
                             'time': backupFeeders['s'][j['backupFeeder']]
                         })
-                        if breaker['direction'] == 'D':
-                            endBus = sections['Upstream Bus'][breaker['section']]
-                        else:
-                            endBus = breaker['bus']
-                        connected = gs.connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
-                        effectsOnSections.append({
-                            'state': 'backup',
-                            'loads': gs.findLoadPoints(connected, loads),
-                            'time': s
-                        })
+                        if DSEBF:
+                            if breaker['direction'] == 'D':
+                                endBus = sections['Upstream Bus'][breaker['section']]
+                            else:
+                                endBus = breaker['bus']
+                            connected = gs.connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
+                            effectsOnSections.append({
+                                'state': 'backup',
+                                'loads': gs.findLoadPoints(connected, loads),
+                                'time': s
+                            })
                         break
             else:
                 # No backup feeder available
@@ -263,7 +266,7 @@ def disconnect(fault, buses, sections):
         if faultBus == 0:
             faultBus = sections['Upstream Bus'][fault]
     if faultBus != 0:
-        disconnectors = disconnectorsDFS(faultBus, buses, sections, connected=[], disconnectors=[])
+        disconnectors = gs.disconnectorsDFS(faultBus, buses, sections, connected=[], disconnectors=[])
 
     openDisconnectors = []
     for i in disconnectors:
@@ -313,10 +316,10 @@ def reconnectProtection(buses, sections, trippedProtection, fault):
         tuple: Updated buses and sections.
     """
     if sections['Upstream Bus'][fault] != 0:
-        if protectionNeededTestDFS(sections['Upstream Bus'][fault], buses, sections, trippedProtection, connected=[], needed=False):
+        if gs.protectionNeededTestDFS(sections['Upstream Bus'][fault], buses, sections, trippedProtection, connected=[], needed=False):
             return buses, sections
     elif sections['Downstream Bus'][fault] != 0:
-        if protectionNeededTestDFS(sections['Downstream Bus'][fault], buses, sections, trippedProtection, connected=[], needed=False):
+        if gs.protectionNeededTestDFS(sections['Downstream Bus'][fault], buses, sections, trippedProtection, connected=[], needed=False):
             return buses, sections
     if trippedProtection['direction'] == 'U':
         sections.loc[trippedProtection['section'], 'Upstream Bus'] = trippedProtection['bus']

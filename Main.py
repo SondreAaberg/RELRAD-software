@@ -1,6 +1,7 @@
 import pandas as pd
 import GraphSearch as gs
 import MiscFunctions as mf
+import MonteCarloSimulation as mc
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
@@ -161,5 +162,7 @@ def MonteCarlo(loc, n, outFile):
     print(system['loads'])
 
 
-RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx')
-MonteCarlo('RBMC p214.xlsx', 5000, 'MonteCarloResultsRBMCp214.xlsx')
+#RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx')
+#MonteCarlo('RBMC p214.xlsx', 5000, 'MonteCarloResultsRBMCp214.xlsx')
+
+mc.MonteCarlo('BUS 2.xlsx', 'MonteCarloResultsBUS2.xlsx', DSEBF = True)

@@ -4,21 +4,21 @@ import random as rng
 import GraphSearch as gs
 import MiscFunctions as mf
 import CreateSystem as cs
+import EffectOfFault as ef
 import VarianceCalculations as vc
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
 
-def MonteCarlo(loc, outFile, beta = 0.005, nCap = 0):
+def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True):
     # Load data from Excel files and create the system
     system = cs.createSystem(loc)
-    
     h = 8736  # Total hours in a year
-    # Perform Monte Carlo simulation for 400 years to find variance of EENS (multithreaded)
+    # Perform Monte Carlo simulation for 200 years to find variance of EENS (multithreaded)
     n1 = 400
     EENS = []
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(mf.MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders']) for year in range(n1)]
+        futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n1)]
 
         for future in futures:
             yealyEENS = 0
@@ -27,14 +27,20 @@ def MonteCarlo(loc, outFile, beta = 0.005, nCap = 0):
                 yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
             EENS.append(yealyEENS)
 
+    EENS = np.array(EENS)
+    print('EENS:', EENS)
     n2 = vc.calcNumberOfSimulations(EENS, beta)  # Calculate number of simulations needed for desired variance
+    print('Number of simulations needed:', n2)
     if nCap > 0 and n2 > nCap:
         n2 = nCap
     
+    print('Number of simulations used:', n2)    
+
+    n2 = int(np.ceil(float(n2)*1.25))  # Increase number of simulations to 1.25 times the calculated value to compensate for inaccuracy in variance calculation 
 
     # Perform Monte Carlo simulation for n years (multithreaded)
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(mf.MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders']) for year in range(n2)]
+        futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n2)]
 
         for future in futures:
             results = future.result()
@@ -83,7 +89,7 @@ def minTTF(history):
     return TTFcomponent
 
 
-def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders):
+def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders, DSEBF=True):
     h = 8736  # Total hours in a year
     results = {}
     for i in loads.index:
@@ -113,7 +119,7 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
                                     index=busesOriginal.index)
             
             # Calculate the effects of faults on load points
-        effectOnLPs = gs.faultEffects(history[fault]['sec'], history[fault]['comp'], busesCopy, sectionsCopy, loads, generationData, backupFeeders, history[fault]['TTR'])
+        effectOnLPs = ef.faultEffects(history[fault]['sec'], history[fault]['comp'], busesCopy, sectionsCopy, loads, generationData, backupFeeders, history[fault]['TTR'], DSEBF=DSEBF)
             
         for LP in effectOnLPs:
             if effectOnLPs[LP] > 0:
