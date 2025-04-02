@@ -1,3 +1,6 @@
+import numpy as np
+import random as rng
+
 
 def distributedGeneration(loads, generation, connection, u):
     powerNeded = 0
@@ -27,11 +30,40 @@ def distributedGeneration(loads, generation, connection, u):
             return u
             
 
-def distributedGenerationRNG(loads, generation, connection, u):
+#def distributedGenerationRNG(loads, generation, connection, u):
 
-def PV():
+def PV(t, Pr, R_c, G_std, G_max, LDI):
+    month = t/(8736*30)
+    day = (month - np.floor(month)) * 30
+    hour = (day - np.floor(day)) * 24
 
-def WP():
+    if hour == 0 or np.round(hour) == 0:
+        hour = 24
+    
+    month = np.ceil(month)
+    day = np.ceil(day)
+    if (hour-np.floor(hour)) < 0.0001:
+        hour = np.round(hour)
+    else:
+        hour = np.ceil(hour)
 
-def BESS():
+    f = rng.uniform(0, 1)
+    if hour >= 6 and hour < 18:
+        G_d = G_max*((-1/36*hour)**2 + 2/(3*hour) - 3)
+        G = (G_d + f)*LDI[month]
+    else:
+        G = 0
+
+    if G >= 0 and G < R_c:
+        production_PV = Pr * G^2/(G_std * R_c)
+    elif G >= R_c and G <= G_std:
+        production_PV = Pr * G/G_std
+    else:
+        production_PV = Pr
+
+    return production_PV
+
+#def WP():
+
+#def BESS():
         

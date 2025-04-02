@@ -8,14 +8,16 @@ import EffectOfFault as ef
 import VarianceCalculations as vc
 import copy
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 
 
-def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True):
+def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True):
+    lock = Lock()
     # Load data from Excel files and create the system
     system = cs.createSystem(loc)
     h = 8736  # Total hours in a year
-    # Perform Monte Carlo simulation for 200 years to find variance of EENS (multithreaded)
-    n1 = 400
+    # Perform Monte Carlo simulation for 600 years to find variance of EENS (multithreaded)
+    n1 = 600
     EENS = []
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n1)]
@@ -26,33 +28,44 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True):
             for LP in results:
                 yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
             EENS.append(yealyEENS)
+            with lock:
+                for i in system['loads'].index:
+                    system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
+                    system['loads'].at[i,'U'] += results[i]['U']
 
     EENS = np.array(EENS)
-    print('EENS:', EENS)
+
+    #n2 = vc.calculate_iterations(CL, np.std(EENS), beta)  # Calculate number of simulations needed for desired confidence level and margin of error
     n2 = vc.calcNumberOfSimulations(EENS, beta)  # Calculate number of simulations needed for desired variance
-    print('Number of simulations needed:', n2)
-    if nCap > 0 and n2 > nCap:
-        n2 = nCap
-    
-    print('Number of simulations used:', n2)    
 
     n2 = int(np.ceil(float(n2)*1.25))  # Increase number of simulations to 1.25 times the calculated value to compensate for inaccuracy in variance calculation 
-
-    # Perform Monte Carlo simulation for n years (multithreaded)
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n2)]
-
-        for future in futures:
-            results = future.result()
-            for i in system['loads'].index:
-                system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
-                system['loads'].at[i,'U'] += results[i]['U']
     
+    if nCap > 0 and n2 > nCap: #Caps the number of simulations to nCap
+        n2 = nCap
+    
+    n2 = max(0, n2 - n1) # Subtracts the already performed simulations from the total number of simulations needed
+
+    
+    if n2 > 0:
+        # Perform Monte Carlo simulation for n years (multithreaded)
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n2)]
+            for future in futures:
+                for LP in results:
+                    yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
+                EENS = np.append(EENS, yealyEENS)
+                results = future.result()
+                with lock:
+                    for i in system['loads'].index:
+                        system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
+                        system['loads'].at[i,'U'] += results[i]['U']
+    
+    trueBeta = vc.calcBeta(EENS)  # Calculate the beta value for the EENS values
 
     # Calculate average failure rate and unavailability for each load point
     for LP in system['loads'].index:
-        system['loads'].at[LP, 'Lambda'] = system['loads'].at[LP, 'nrOfFaults'] / 2
-        system['loads'].at[LP, 'U']/= 2
+        system['loads'].at[LP, 'Lambda'] = system['loads'].at[LP, 'nrOfFaults'] / (n2+n1)
+        system['loads'].at[LP, 'U']/= (n2+n1)
 
     system['loads']['R'] = system['loads']['U'] / system['loads']['Lambda']
     system['loads']['SAIFI'] = system['loads']['Lambda'] * system['loads']['Number of customers']
@@ -67,9 +80,12 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True):
     system['loads'].at['TOTAL', 'SAIDI'] = system['loads']['SAIDI'].sum() / (system['loads'].at['TOTAL', 'Number of customers'])
     system['loads'].at['TOTAL', 'CAIDI'] = system['loads'].at['TOTAL', 'SAIDI'] / system['loads'].at['TOTAL', 'SAIFI']
     system['loads'].at['TOTAL', 'EENS'] = system['loads']['EENS'].sum()
+    system['loads'].at['TOTAL', 'nr of simulations'] = n1 + n2
+    system['loads'].at['TOTAL', 'provided beta'] = beta
+    system['loads'].at['TOTAL', 'calculated beta'] = trueBeta
     # Print and save results        
     system['loads'].to_excel(outFile, sheet_name='Load Points')
-    print(system['loads'])
+
 
 
 

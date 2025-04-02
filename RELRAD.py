@@ -1,14 +1,13 @@
 import pandas as pd
-import GraphSearch as gs
-import MiscFunctions as mf
+import EffectOfFault as ef
 import CreateSystem as cs
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
-def RELRAD(loc, outFile):
-
+def RELRAD(loc, outFile, DSEBF=True):
 
     system = cs.createSystem(loc)
+    
     '''
     # Load data from Excel files
     buses = pd.read_excel(loc, 'Bus Data', index_col=0)
@@ -42,7 +41,6 @@ def RELRAD(loc, outFile):
     # Iterate through each section and component to calculate effects on load points
     for sec, row in system['sections'].iterrows():
         for comp in system['sections']['Components'][sec]:
-            print(sec, comp)
             # Create deep copies of the original data for analysis
             sectionsCopy = pd.DataFrame(columns=system['sections'].columns,
                                         data=copy.deepcopy(system['sections'].values),
@@ -52,7 +50,7 @@ def RELRAD(loc, outFile):
                                      index=system['buses'].index)
             
             # Calculate the effects of faults on load points
-            effectOnLPs = gs.faultEffects(sec, comp, busesCopy, sectionsCopy, system['loads'], system['generationData'], system['backupFeeders'], system['sections']['Components'][sec][comp]['r'])
+            effectOnLPs = ef.faultEffects(sec, comp, busesCopy, sectionsCopy, system['loads'], system['generationData'], system['backupFeeders'], system['sections']['Components'][sec][comp]['r'], DSEBF=DSEBF)
             componentTag = sec + comp
             for LP in effectOnLPs:
                 if effectOnLPs[LP] > 0:
@@ -80,4 +78,3 @@ def RELRAD(loc, outFile):
     system['loads'].at['TOTAL', 'EENS'] = system['loads']['EENS'].sum()
     # Print and save results        
     system['loads'].to_excel(outFile, sheet_name='Load Points')
-    print(system['loads'])
