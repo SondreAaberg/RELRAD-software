@@ -38,13 +38,16 @@ def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True):
     #n2 = vc.calculate_iterations(CL, np.std(EENS), beta)  # Calculate number of simulations needed for desired confidence level and margin of error
     n2 = vc.calcNumberOfSimulations(EENS, beta)  # Calculate number of simulations needed for desired variance
 
-    n2 = int(np.ceil(float(n2)*1.25))  # Increase number of simulations to 1.25 times the calculated value to compensate for inaccuracy in variance calculation 
+    #n2 = int(np.ceil(float(n2)*1.25))  # Increase number of simulations to 1.25 times the calculated value to compensate for inaccuracy in variance calculation (optional, should not be nessecary)
     
     if nCap > 0 and n2 > nCap: #Caps the number of simulations to nCap
         n2 = nCap
     
+    print('Number of simulations needed:', n2)
+
     n2 = max(0, n2 - n1) # Subtracts the already performed simulations from the total number of simulations needed
 
+    print('Number of simulations to be performed:', n2)
     
     if n2 > 0:
         # Perform Monte Carlo simulation for n years (multithreaded)
