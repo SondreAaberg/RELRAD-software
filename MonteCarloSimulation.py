@@ -11,16 +11,19 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
 
-def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True):
+def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DERS = False):
     lock = Lock()
     # Load data from Excel files and create the system
     system = cs.createSystem(loc)
     h = 8736  # Total hours in a year
     # Perform Monte Carlo simulation for 600 years to find variance of EENS (multithreaded)
-    n1 = 600
+    if nCap > 0:
+        n1 = max(nCap, 600)
+    else:
+        n1 = 600
     EENS = []
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n1)]
+        futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF, DERS = DERS) for year in range(n1)]
 
         for future in futures:
             yealyEENS = 0
@@ -108,7 +111,7 @@ def minTTF(history):
     return TTFcomponent
 
 
-def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders, DSEBF=True):
+def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders, DSEBF=True, DERS = False):
     h = 8736  # Total hours in a year
     results = {}
     for i in loads.index:
@@ -138,7 +141,7 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
                                     index=busesOriginal.index)
             
             # Calculate the effects of faults on load points
-        effectOnLPs = ef.faultEffects(history[fault]['sec'], history[fault]['comp'], busesCopy, sectionsCopy, loads, generationData, backupFeeders, history[fault]['TTR'], DSEBF=DSEBF)
+        effectOnLPs = ef.faultEffects(history[fault]['sec'], history[fault]['comp'], busesCopy, sectionsCopy, loads, generationData, backupFeeders, history[fault]['TTR'], DSEBF=DSEBF, DERS = DERS)
             
         for LP in effectOnLPs:
             if effectOnLPs[LP] > 0:

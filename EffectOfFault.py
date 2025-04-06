@@ -1,8 +1,9 @@
 import pandas as pd
 import GraphSearch as gs
 import MiscFunctions as mf
+import GenerationFunctions as gf
 
-def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, DSEBF = True, RNG=False):
+def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, DSEBF = True, RNG=False, DERS = False):
     """
     Calculates the effects of a fault on the system.
 
@@ -91,27 +92,40 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                 'time': 0
             })
         else:
+            if DERS:
+                uBackup = gf.distributedGeneration(loads, generationData, i, r) #Calculates the outage duration after local generation is utilized
+            else:
+                uBackup = r
             # Check for backup feeders
             connectedBackup = gs.findBackupFeeders(i, backupFeeders)
             if connectedBackup:
                 for j in connectedBackup:
                     if gs.mainPower(j['otherEnd'], buses, sections, generationData):
-                        breaker = gs.findProtection(j['otherEnd'], buses, sections)
-                        effectsOnSections.append({
-                            'state': 'backupPower',
-                            'loads': gs.findLoadPoints(i, loads),
-                            'time': backupFeeders['s'][j['backupFeeder']]
-                        })
-                        if DSEBF:
-                            if breaker['direction'] == 'D':
-                                endBus = sections['Upstream Bus'][breaker['section']]
-                            else:
-                                endBus = breaker['bus']
-                            connected = gs.connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
+                        if backupFeeders.at[j['backupFeeder'], 's'] < uBackup:
+                            breaker = gs.findProtection(j['otherEnd'], buses, sections)
                             effectsOnSections.append({
-                                'state': 'backup',
-                                'loads': gs.findLoadPoints(connected, loads),
-                                'time': s
+                                'state': 'backupPower',
+                                'loads': gs.findLoadPoints(i, loads),
+                                'time': backupFeeders['s'][j['backupFeeder']]
+                            })
+                            if DSEBF:
+                                if breaker['direction'] == 'D':
+                                    endBus = sections['Upstream Bus'][breaker['section']]
+                                else:
+                                    endBus = breaker['bus']
+                                connected = gs.connectedBetween(j['otherEnd'], endBus, buses, sections, connected=[])
+                                effectsOnSections.append({
+                                    'state': 'backup',
+                                    'loads': gs.findLoadPoints(connected, loads),
+                                    'time': s
+                                })
+                        elif DERS:
+                            print('Local generation utilized', uBackup)
+                            # If DERS are enabled and are prefferential to BF, use local generation
+                            effectsOnSections.append({
+                                'state': 'localGeneration',
+                                'loads': gs.findLoadPoints(i, loads),
+                                'time': uBackup
                             })
                         break
             else:

@@ -163,7 +163,7 @@ def MonteCarlo(loc, n, outFile):
 
 #RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx')
 #MonteCarlo('RBMC p214.xlsx', 5000, 'MonteCarloResultsRBMCp214.xlsx')
-
+'''
 mc.MonteCarlo('BUS 4.xlsx', 'MonteCarloResultsBUS4.xlsx', beta=0.02, DSEBF = False)
 rr.RELRAD('BUS 4.xlsx', 'RELRADResultsBUS4.xlsx', DSEBF = False)
 mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResultsRBMCp214.xlsx', beta=0.02, DSEBF = False)
@@ -171,6 +171,7 @@ rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx', DSEBF = False)
 mc.MonteCarlo('BUS 2.xlsx', 'MonteCarloResultsBUS2.xlsx', beta=0.02, DSEBF = False)
 rr.RELRAD('BUS 2.xlsx', 'RELRADResultsBUS2.xlsx', DSEBF = False)
 mc.MonteCarlo('BUS 6.xlsx', 'MonteCarloResultsBUS6.xlsx', beta=0.02, DSEBF = False)
-rr.RELRAD('BUS 6.xlsx', 'RELRADResultsBUS6.xlsx', DSEBF = False)
-mc.MonteCarlo('SimpleTest.xlsx', 'MonteCarloResultsSimpleTest.xlsx', beta=0.02, DSEBF = False)
-rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTest.xlsx', DSEBF = False)
+rr.RELRAD('BUS 6.xlsx', 'RELRADResultsBUS6.xlsx', DSEBF = False)'
+'''
+#mc.MonteCarlo('SimpleTest.xlsx', 'MonteCarloResultsSimpleTestTEST2.xlsx', beta=0.05, DSEBF = False, DERS=True)
+rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTestTEST2.xlsx', DSEBF = False, DERS=True)
