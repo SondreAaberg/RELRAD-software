@@ -62,7 +62,7 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False):
                     # Update load point data
                     system['loads'].loc[LP, 'Lambda'] += system['sections']['Components'][sec][comp]['lambda']
                     system['loads'].loc[LP, 'U'] += system['sections']['Components'][sec][comp]['lambda'] * effectOnLPs[LP]
-
+            print('LPs', effectOnLPs)
     # Print and save results
     system['loads']['R'] = system['loads']['U'] / system['loads']['Lambda']
     system['loads']['SAIFI'] = system['loads']['Lambda'] * system['loads']['Number of customers']

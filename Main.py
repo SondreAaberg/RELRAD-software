@@ -174,4 +174,4 @@ mc.MonteCarlo('BUS 6.xlsx', 'MonteCarloResultsBUS6.xlsx', beta=0.02, DSEBF = Fal
 rr.RELRAD('BUS 6.xlsx', 'RELRADResultsBUS6.xlsx', DSEBF = False)'
 '''
 #mc.MonteCarlo('SimpleTest.xlsx', 'MonteCarloResultsSimpleTestTEST2.xlsx', beta=0.05, DSEBF = False, DERS=True)
-rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTestTEST2.xlsx', DSEBF = False, DERS=True)
+rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTestTEST3.xlsx', DSEBF = False, DERS=False)

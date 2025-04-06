@@ -120,14 +120,20 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                                     'time': s
                                 })
                         elif DERS:
-                            print('Local generation utilized', uBackup)
                             # If DERS are enabled and are prefferential to BF, use local generation
                             effectsOnSections.append({
-                                'state': 'localGeneration',
+                                'state': 'localGenerationOverBF',
                                 'loads': gs.findLoadPoints(i, loads),
                                 'time': uBackup
                             })
                         break
+            elif DERS and uBackup < r:
+                # If no backup feeder is available, use local generation
+                effectsOnSections.append({
+                    'state': 'localGeneration',
+                    'loads': gs.findLoadPoints(i, loads),
+                    'time': uBackup
+                })
             else:
                 # No backup feeder available
                 effectsOnSections.append({
@@ -136,6 +142,8 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                     'time': r
                 })
 
+    print('Effects on sections:', effectsOnSections)
+    
     # Aggregate the effects on load points
     effectsOnLPs = {}
     for i in effectsOnSections:

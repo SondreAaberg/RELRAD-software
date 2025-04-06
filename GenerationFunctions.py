@@ -9,10 +9,10 @@ def distributedGeneration(loads, generation, connection, u):
     powerAvailable = 0
 
     for i in connection:
-        if i in loads:
+        if i in loads.index:
             powerNeded += loads['Load point peak [MW]'][i]
             energyNeeded += loads['Load level average [MW]'][i] * u
-        if i in generation:
+        if i in generation.index:
             if generation['Lim MW'][i] == 'Inf' and generation['E cap'][i] != 'Inf':
                 return 0
             powerAvailable += generation['Lim MW'][i]
@@ -20,6 +20,11 @@ def distributedGeneration(loads, generation, connection, u):
                 energyAvailable += generation['E cap'][i]
             else:
                 energyAvailable += generation['Lim MW'][i] * u
+
+    print('powerNeded', powerNeded)
+    print('energyNeeded', energyNeeded)
+    print('energyAvailable', energyAvailable)
+    print('powerAvailable', powerAvailable)
 
     if energyAvailable > energyNeeded and powerAvailable > powerNeded:
         return 0

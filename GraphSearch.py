@@ -420,12 +420,11 @@ def mainPower(bus, buses, sections, generationData):
         if bus in generationData.index:
             if generationData['Main Feeder'][bus]:
                 return True
-        elif buses['Upstream Section'][bus] == 0:
+        if buses['Upstream Section'][bus] == 0:
             return False
-        elif sections['Upstream Bus'][buses['Upstream Section'][bus]] == 0:
+        if sections['Upstream Bus'][buses['Upstream Section'][bus]] == 0:
             return False
-        else:
-            bus = sections['Upstream Bus'][buses['Upstream Section'][bus]]
+        bus = sections['Upstream Bus'][buses['Upstream Section'][bus]]
 
 def findLoadPoints(connections, loads):
     """
