@@ -22,8 +22,8 @@ def createSystem(file_path):
 
     # Initialize columns for buses and sections
     system['buses']['Upstream Section'] = str(0)
-    system['buses']['Downstream Sections'] = [list() for _ in range(len(system['buses'].index))]
-    system['buses']['Connected Sections'] = [list() for _ in range(len(system['buses'].index))]
+    system['buses']['Downstream Sections'] = [list() for i in range(len(system['buses'].index))]
+    system['buses']['Connected Sections'] = [list() for i in range(len(system['buses'].index))]
     system['sections']['s'] = float(0)
     system['sections']['Components'] = {}
 

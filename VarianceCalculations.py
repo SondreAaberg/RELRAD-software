@@ -22,8 +22,6 @@ def calcNumberOfSimulations(EENS, beta):
     meanEENS = np.mean(EENS)
     varEENS = var(EENS)
 
-    print('meanEENS', meanEENS)
-    print('varEENS', varEENS)
 
     n = ( np.sqrt(varEENS) / (beta * meanEENS)) ** 2
     n = int(np.ceil(n))
@@ -56,3 +54,20 @@ def calculate_iterations(confidence_level, std_dev, margin_of_error):
     # Calculate the required number of iterations
     n = (Z * std_dev / margin_of_error) ** 2
     return np.ceil(n)
+
+def calcConfidenceInterval(EENS):
+    """
+    Calculate the confidence interval for the EENS values.
+
+    Args:
+        EENS (list): List of EENS values.
+
+    Returns:
+        tuple: Lower and upper bounds of the confidence interval.
+    """
+    meanEENS = np.mean(EENS)  # Sample mean
+    stdEENS = var(EENS)  # Sample standard deviation
+    n = len(EENS) # Sample size
+    
+    return {'CI95':(meanEENS - (1.96 * (np.sqrt(stdEENS) / np.sqrt(n))), meanEENS + (1.96 * (np.sqrt(stdEENS) / np.sqrt(n)))), 
+            'CI99':(meanEENS - (2.576 * (np.sqrt(stdEENS) / np.sqrt(n))), meanEENS + (2.576 * (np.sqrt(stdEENS) / np.sqrt(n))))}

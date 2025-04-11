@@ -9,7 +9,7 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
 
     Args:
         fault (int): The faulted section.
-        component (str): The component affected by the fault.
+        component (str): The component affected by the fault (not in use anymore).
         buses (DataFrame): Data about buses in the system.
         sections (DataFrame): Data about sections in the system.
         loads (DataFrame): Data about loads in the system.
@@ -142,7 +142,6 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                     'time': r
                 })
 
-    print('Effects on sections:', effectsOnSections)
     
     # Aggregate the effects on load points
     effectsOnLPs = {}

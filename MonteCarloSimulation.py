@@ -24,7 +24,6 @@ def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DER
     EENS = []
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF, DERS = DERS) for year in range(n1)]
-
         for future in futures:
             yealyEENS = 0
             results = future.result()
@@ -45,18 +44,16 @@ def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DER
     
     if nCap > 0 and n2 > nCap: #Caps the number of simulations to nCap
         n2 = nCap
-    
-    print('Number of simulations needed:', n2)
 
     n2 = max(0, n2 - n1) # Subtracts the already performed simulations from the total number of simulations needed
 
-    print('Number of simulations to be performed:', n2)
     
     if n2 > 0:
         # Perform Monte Carlo simulation for n years (multithreaded)
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(MonteCarloYear, system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], DSEBF=DSEBF) for year in range(n2)]
             for future in futures:
+                yealyEENS = 0
                 for LP in results:
                     yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
                 EENS = np.append(EENS, yealyEENS)
@@ -89,6 +86,9 @@ def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DER
     system['loads'].at['TOTAL', 'nr of simulations'] = n1 + n2
     system['loads'].at['TOTAL', 'provided beta'] = beta
     system['loads'].at['TOTAL', 'calculated beta'] = trueBeta
+    CI = vc.calcConfidenceInterval(EENS)  # Calculate the confidence interval for the EENS values
+    system['loads'].at['TOTAL', 'EENS 95% CI'] = str(CI['CI95'])
+    system['loads'].at['TOTAL', 'EENS 99% CI'] = str(CI['CI99'])
     # Print and save results        
     system['loads'].to_excel(outFile, sheet_name='Load Points')
 

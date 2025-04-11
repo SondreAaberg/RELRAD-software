@@ -21,10 +21,6 @@ def distributedGeneration(loads, generation, connection, u):
             else:
                 energyAvailable += generation['Lim MW'][i] * u
 
-    print('powerNeded', powerNeded)
-    print('energyNeeded', energyNeeded)
-    print('energyAvailable', energyAvailable)
-    print('powerAvailable', powerAvailable)
 
     if energyAvailable > energyNeeded and powerAvailable > powerNeded:
         return 0
