@@ -3,7 +3,7 @@ import GraphSearch as gs
 import MiscFunctions as mf
 import GenerationFunctions as gf
 
-def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, DSEBF = True, RNG=False, DERS = False):
+def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, loadCurve=0, DSEBF = True, RNG=False, DERS = False):
     """
     Calculates the effects of a fault on the system.
 
