@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def createSystem(file_path):
+def createSystem(file_path, LoadCurve = False):
     """
     Creates the system by reading data from Excel files.
 
@@ -37,6 +37,13 @@ def createSystem(file_path):
     system['buses'] = fixbuses(system['buses'], system['sections'])
     system['sections'] = calcFailRates(system['sections'], system['components'])
 
+    if LoadCurve:
+        # Load load curve data from Excel file
+        loadCurveData = {}
+        loadCurveData['weeklyFactor'] = pd.read_excel(file_path, 'Weekly Load Factor', index_col=0)
+        loadCurveData['dailyFactor'] = pd.read_excel(file_path, 'Daily Load Factor', index_col=0)
+        loadCurveData['hourlyFactor'] = pd.read_excel(file_path, 'Hourly Load Factor', index_col=0)
+        system['loadCurveData'] = loadCurveData
     return system
 
 

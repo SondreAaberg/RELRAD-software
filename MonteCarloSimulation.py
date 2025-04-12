@@ -6,16 +6,25 @@ import MiscFunctions as mf
 import CreateSystem as cs
 import EffectOfFault as ef
 import VarianceCalculations as vc
+import LoadCurve as lc
 import copy
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
 
-def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DERS = False):
+def MonteCarlo(loc, outFile, CL = 0.95, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, LoadCurve = False):
     lock = Lock()
     # Load data from Excel files and create the system
-    system = cs.createSystem(loc)
+    system = cs.createSystem(loc, LoadCurve=LoadCurve)
+    
     h = 8736  # Total hours in a year
+
+    if LoadCurve: # Create load curve if load curve data is provided
+        loadCurve = lc.createLoadCurve(system['loadCurveData'])
+    else:
+        loadCurve = False
+    
+    print(loadCurve)
     # Perform Monte Carlo simulation for 600 years to find variance of EENS (multithreaded)
     if nCap > 0:
         n1 = max(nCap, 600)
@@ -140,7 +149,10 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
                                     data=copy.deepcopy(busesOriginal.values),
                                     index=busesOriginal.index)
             
-            # Calculate the effects of faults on load points
+        # Makes sure the calculation does not go into the next year    
+        if history[fault]['TTF'] + history[fault]['TTR'] > h:
+            history[fault]['TTR'] = h - history[fault]['TTF']
+        # Calculate the effects of faults on load points
         effectOnLPs = ef.faultEffects(history[fault]['sec'], history[fault]['comp'], busesCopy, sectionsCopy, loads, generationData, backupFeeders, history[fault]['TTR'], DSEBF=DSEBF, DERS = DERS)
             
         for LP in effectOnLPs:
