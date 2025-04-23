@@ -32,6 +32,8 @@ def createSystem(file_path, LoadCurve = False):
     system['loads']['nrOfFaults'] = int(0)
     system['loads']['R'] = float(0)
     system['loads']['Lambda'] = float(0)
+    if LoadCurve:
+        system['loads']['ENS'] = float(0)
 
     # Fix buses and calculate failure rates
     system['buses'] = fixbuses(system['buses'], system['sections'])

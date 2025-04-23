@@ -3,7 +3,7 @@ import pandas as pd
 
 def createLoadCurve(loadCurveData):
     loadCurve = []
-    for t in range(1, 3737):
+    for t in range(1, 8737):
         week = t/(8736/52)
         day = (week-np.floor(week))*7
         hour = (day-np.floor(day))*24
@@ -48,21 +48,20 @@ def createLoadCurve(loadCurveData):
                 hourlyfactor = 'Winter Wkdy'
  
         loadCurve.append(loadCurveData['weeklyFactor'].at[week, 'Load Factor']/100 * loadCurveData['dailyFactor'].at[day, 'Load Factor']/100 * loadCurveData['hourlyFactor'].at[hour, hourlyfactor]/100) # (Factors are given in %.)
+        loadCurve.append(0) # 0 for the last hour of the year to prevent errors
     return loadCurve
 
-def loadCurveSumEnergy(t, r, peakLoad, loadCurve):
-    """
-    Calculates the total energy demand of a load for a time period r strating at t using load curve.
-    Arguments:
-        t: time in hours since the start of the year
-        r: time in hours for which the load curve is calculated
-        peakLoad: peak load in MW
-        loadCurveData: List containing the load curve
-    Returns:
-    """
-    
-    E = 0
+def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
 
+    if r is None:
+        return 0
+
+    peakLoad = 0
+    for load in loadList:
+        peakLoad += loads['Load point peak [MW]'][load] # Peak load in MW
+
+    E = 0
+    
     #creates a list of the length of time the load is in each of the load curve points
     # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
     timeList = []
@@ -72,7 +71,9 @@ def loadCurveSumEnergy(t, r, peakLoad, loadCurve):
     timeList.append((r-(1-t%1))%1)
 
     for i in range(len(timeList)):
-        timePoint = np.int(np.floor(t+i))
+        timePoint = int(np.floor(t+i))
+        if timePoint >= 8736:
+            return E
         E += timeList[i] * loadCurve[timePoint] * peakLoad # Energy in MWh
     return E
 

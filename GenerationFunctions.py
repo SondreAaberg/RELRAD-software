@@ -29,9 +29,30 @@ def distributedGeneration(loads, generation, connection, u):
             return u*(energyAvailable/energyNeeded)
         else:
             return u
+        
+
+def loadCurveDistributedGeneration(energyNeeded, generation, connection, u):
+    energyAvailable = 0
+    
+    for i in connection:
+        if i in generation.index:
+            if generation['Lim MW'][i] == 'Inf' and generation['E cap'][i] != 'Inf':
+                return 0
+            if generation['E cap'][i] != 'Inf':
+                energyAvailable += generation['E cap'][i]
+            else:
+                energyAvailable += generation['Lim MW'][i] * u
+
+
+    if energyAvailable > energyNeeded:
+        return 0
+    elif energyNeeded > 0:
+        return u*(energyAvailable/energyNeeded)
+    else:
+        return 0
             
 
-#def distributedGenerationRNG(loads, generation, connection, u):
+
 
 def PV(t, Pr, R_c, G_std, G_max, LDI):
     month = t/(8736*30)
