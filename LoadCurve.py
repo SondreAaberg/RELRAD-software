@@ -66,9 +66,10 @@ def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
     # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
     timeList = []
     timeList.append(1-t%1)
-    for i in range(int(np.floor(r-1-t%1))):
+    for i in range(int(np.floor(r-1+t%1))):
         timeList.append(1)
     timeList.append((r-(1-t%1))%1)
+
 
     for i in range(len(timeList)):
         timePoint = int(np.floor(t+i))

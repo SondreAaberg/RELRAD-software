@@ -32,6 +32,8 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
     else:
         n1 = 600
     EENS = []
+
+
     if LoadCurve:
         # Perform Monte Carlo simulation for n years (multithreaded)
         with ThreadPoolExecutor() as executor:
