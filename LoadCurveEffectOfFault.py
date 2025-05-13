@@ -4,7 +4,7 @@ import MiscFunctions as mf
 import GenerationFunctions as gf
 import LoadCurve as lc
 
-def loadCurveFaultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, t, r, loadCurve=0, DSEBF = True, RNG=False, DERS = False):
+def loadCurveFaultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, t, r, loadCurve=0, DERScurve = 0, DSEBF = True, RNG=False, DERS = False):
     """
     Calculates the effects of a fault on the system.
 
@@ -97,13 +97,22 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
             })
         else:
             if DERS:
-                uBackup = gf.loadCurveDistributedGeneration(
-                            lc.loadCurveSumEnergy(t, r, gs.findLoadPoints(i, loads), loads, loadCurve), 
+                if DERScurve:
+                    ENS, uBackup = lc.loadCurveDERS(t, r, gs.findLoadPoints(i, loads), loads, loadCurve, generationData, i , DERScurve)
+
+                    uBackup = min(s+uBackup, r) # adds the swithing time to the backup power outage duration
+                else:
+                    uBackup = gf.loadCurveDistributedGeneration(
+                            lc.loadCurveSumEnergy(t, r, gs.findLoadPoints(i, loads), loads, loadCurve),
+                            lc.loadPeak(t, r, gs.findLoadPoints(i, loads), loads, loadCurve),
                             generationData, 
                             i, 
                             r) #Calculates the outage duration after local generation is utilized
+                    
+                    uBackup = min(s+uBackup, r) # adds the swithing time to the backup power outage duration
             else:
                 uBackup = r
+            
             # Check for backup feeders
             connectedBackup = gs.findBackupFeeders(i, backupFeeders)
             if connectedBackup:
@@ -131,21 +140,37 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
                                 })
                         elif DERS:
                             # If DERS are enabled and are prefferential to BF, use local generation
-                            effectsOnSections.append({
+                            if DERScurve:
+                                effectsOnSections.append({
+                                'state': 'localGenerationOverBF',
+                                'loads': gs.findLoadPoints(i, loads),
+                                'time': uBackup,
+                                'ENS': ENS
+                                })
+                            else:
+                                effectsOnSections.append({
+                                    'state': 'localGenerationOverBF',
+                                    'loads': gs.findLoadPoints(i, loads),
+                                    'time': uBackup,
+                                    'ENS': lc.loadCurveSumEnergy(t, uBackup, gs.findLoadPoints(i, loads), loads, loadCurve)
+                                })
+                        break
+            elif DERS and uBackup < r:
+                # If no backup feeder is available, use local generation
+                if DERScurve:
+                    effectsOnSections.append({
+                                'state': 'localGenerationOverBF',
+                                'loads': gs.findLoadPoints(i, loads),
+                                'time': uBackup,
+                                'ENS': ENS
+                                })
+                else:
+                    effectsOnSections.append({
                                 'state': 'localGenerationOverBF',
                                 'loads': gs.findLoadPoints(i, loads),
                                 'time': uBackup,
                                 'ENS': lc.loadCurveSumEnergy(t, uBackup, gs.findLoadPoints(i, loads), loads, loadCurve)
-                            })
-                        break
-            elif DERS and uBackup < r:
-                # If no backup feeder is available, use local generation
-                effectsOnSections.append({
-                    'state': 'localGeneration',
-                    'loads': gs.findLoadPoints(i, loads),
-                    'time': uBackup,
-                    'ENS': lc.loadCurveSumEnergy(t, uBackup, gs.findLoadPoints(i, loads), loads, loadCurve)
-                })
+                                })
             else:
                 # No backup feeder available
                 effectsOnSections.append({
@@ -155,23 +180,48 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
                     'ENS': lc.loadCurveSumEnergy(t, r, gs.findLoadPoints(i, loads), loads, loadCurve)
                 })
 
+
+
+    #print('Effects on sections:', effectsOnSections)
+
     
     # Aggregate the effects on load points
+    ''''
+    ENS = 0
     effectsOnLPs = {}
     for LP in loads.index:
         LPeffects = {'U': 0, 'ENS': 0}
         effectsOnLPs[LP] = LPeffects
     for sec in effectsOnSections:
+        ENS += sec['ENS']
         for LP in sec['loads']:
             if sec['time'] is None:
                 sec['time'] = 0
             if sec['time'] > effectsOnLPs[LP]['U']:
                 effectsOnLPs[LP]['U'] = sec['time']
-                effectsOnLPs[LP]['ENS'] = sec['ENS']
+    '''
+
+    ENS = 0
+    effectsOnLPs = {}
+    for sec in effectsOnSections:
+        ENS += sec['ENS']
+        for LP in sec['loads']:
+            if LP in effectsOnLPs:
+                if sec['time'] is None:
+                    sec['time'] = 0
+                elif sec['time'] > effectsOnLPs[LP]:
+                    effectsOnLPs[LP] = sec['time']
+            else:
+                if sec['time'] is None:
+                    effectsOnLPs[LP] = 0
+                else:
+                    effectsOnLPs[LP] = sec['time']
+
 
 
     # Return the final effects on load points
-    return effectsOnLPs
+    #print('Effects on load points:', effectsOnLPs)
+    return effectsOnLPs, ENS
 
 
 def tripProtection(fault, buses, sections):

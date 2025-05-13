@@ -142,6 +142,7 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                     'time': r
                 })
 
+    #print('Effects on sections:', effectsOnSections) #Intermediat debugging line
     
     # Aggregate the effects on load points
     effectsOnLPs = {}

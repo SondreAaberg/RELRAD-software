@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import random as rng
 
 def createLoadCurve(loadCurveData):
     loadCurve = []
@@ -79,5 +80,98 @@ def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
     return E
 
 
+def randomGenerationCurve():
+    generationCurve = []
+    for i in range(8738): # Flat generation curve, 1 for each hour of the year
+        generationCurve.append(rng.uniform(0, 2))
+    return generationCurve
+
+
+
+
     
+def loadCurveDERS(t, r, loadList, loads, loadCurve, generationData, connection, generationCurve, storageCurve = None): 
+
+    storageCurve = generationCurve.copy() #uses the generation curve = storage curve for simple example
+
+
+    if r is None:
+        return 0, 0
+
+
+    peakLoad = 0
+    for load in loadList:
+        peakLoad += loads['Load point peak [MW]'][load] # Peak load in MW
+
+
+    localGeneration = 0
+    energyStorage = 0
+    storagePower = 0
+    for i in connection:
+        if i in generationData.index:
+            if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
+                localGeneration += generationData['Lim MW'][i]
+            elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
+                energyStorage += generationData['E cap'][i]
+                storagePower += generationData['Lim MW'][i]
     
+    #creates a list of the length of time the load is in each of the load curve points
+    # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
+    timeList = []
+    timeList.append(1-t%1)
+    for i in range(int(np.floor(r-1+t%1))):
+        timeList.append(1)
+    timeList.append((r-(1-t%1))%1)
+
+
+    storage = storageCurve[int(np.floor(t))] * energyStorage
+
+
+    ENS = 0
+    U = 0
+    for i in range(len(timeList)):
+        timePoint = int(np.floor(t+i))
+        if timePoint >= 8736:
+            return ENS, U
+        if generationCurve[timePoint] * localGeneration > loadCurve[timePoint] * peakLoad:
+            ENS += 0
+            U += 0
+        elif (generationCurve[timePoint] * localGeneration)*timeList[i] + storage > (loadCurve[timePoint] * peakLoad) * timeList[i] and generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad:
+            storage -= (loadCurve[timePoint] * peakLoad) * timeList[i] - (generationCurve[timePoint] * localGeneration) * timeList[i]
+            ENS += 0
+            U += 0
+        else:
+            ENS += timeList[i] * loadCurve[timePoint] * peakLoad
+            U += timeList[i]
+
+
+    return ENS, U
+
+
+
+
+
+def loadPeak(t, r, loadList, loads, loadCurve):
+    if r is None:
+        return 0
+
+    peakLoad = 0
+    for load in loadList:
+        peakLoad += loads['Load point peak [MW]'][load] # Peak load in MW
+    
+    #creates a list of the length of time the load is in each of the load curve points
+    # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
+    timeList = []
+    timeList.append(1-t%1)
+    for i in range(int(np.floor(r-1+t%1))):
+        timeList.append(1)
+    timeList.append((r-(1-t%1))%1)
+
+    P = 0
+    for i in range(len(timeList)):
+        timePoint = int(np.floor(t+i))
+        if timePoint >= 8736:
+            return P
+        if loadCurve[timePoint] * peakLoad > P:
+            P = loadCurve[timePoint] * peakLoad
+    return P

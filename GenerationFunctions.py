@@ -13,10 +13,8 @@ def distributedGeneration(loads, generation, connection, u):
             powerNeded += loads['Load point peak [MW]'][i]
             energyNeeded += loads['Load level average [MW]'][i] * u
         if i in generation.index:
-            if generation['Lim MW'][i] == 'Inf' and generation['E cap'][i] != 'Inf':
-                return 0
             powerAvailable += generation['Lim MW'][i]
-            if generation['E cap'][i] != 'Inf':
+            if generation['E cap'][i] > 0:
                 energyAvailable += generation['E cap'][i]
             else:
                 energyAvailable += generation['Lim MW'][i] * u
@@ -31,29 +29,30 @@ def distributedGeneration(loads, generation, connection, u):
             return u
         
 
-def loadCurveDistributedGeneration(energyNeeded, generation, connection, u):
+def loadCurveDistributedGeneration(energyNeeded, peakPowerNeeded, generation, connection, u):
     energyAvailable = 0
+    powerAvailable = 0
     
     for i in connection:
         if i in generation.index:
-            if generation['Lim MW'][i] == 'Inf' and generation['E cap'][i] != 'Inf':
-                return 0
-            if generation['E cap'][i] != 'Inf':
+            if generation['E cap'][i] > 0:
+                powerAvailable += generation['Lim MW'][i]
                 energyAvailable += generation['E cap'][i]
             else:
+                powerAvailable += generation['Lim MW'][i]
                 energyAvailable += generation['Lim MW'][i] * u
 
 
-    if energyAvailable > energyNeeded:
+    if energyAvailable >= energyNeeded and powerAvailable >= peakPowerNeeded:
         return 0
-    elif energyNeeded > 0:
+    elif energyNeeded > 0 and powerAvailable >= peakPowerNeeded:
         return u*(energyAvailable/energyNeeded)
     else:
         return 0
             
 
 
-
+#this PV function is not fully implemented, but is an example of how the PV function from Enevoldsen2021 would be coded
 def PV(t, Pr, R_c, G_std, G_max, LDI):
     month = t/(8736*30)
     day = (month - np.floor(month)) * 30

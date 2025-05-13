@@ -219,6 +219,15 @@ def disconnect(fault, buses, sections):
                 's': sections['s'][fault],
                 'toBus': sections['Upstream Bus'][fault]
             })
+    elif sections['Disconnector direction'][fault] == 'D' and sections['Upstream Bus'][fault] == 0:
+        faultBus = 0
+        disconnectors = []
+        disconnectors.append({
+                'line': fault,
+                'fromBus': sections['Downstream Bus'][fault],
+                's': sections['s'][fault],
+                'toBus': sections['Upstream Bus'][fault]
+            })
     elif sections['Disconnector direction'][fault] == 'U':
         faultBus = sections['Downstream Bus'][fault]
     elif sections['Disconnector direction'][fault] == 'D':
