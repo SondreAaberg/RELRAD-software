@@ -45,6 +45,8 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
         if i['s'] > s:
             s = i['s']
 
+    r = max(r, s)  # Ensure r is at least as long as the maximum switching time (mostly to avoid errors from negative values)
+
     # Calculate switching times for each bus
     switchingTimes = {}
     for i in disconnectors:
@@ -91,16 +93,16 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                 'loads': gs.findLoadPoints(i, loads),
                 'time': 0
             })
-        else:
+        else: # Section not connected to the main power source or to the fault, checks for any type of backup power
             if DERS:
-                uBackup = gf.distributedGeneration(loads, generationData, i, r) #Calculates the outage duration after local generation is utilized
+                uBackup = gf.distributedGeneration(loads, generationData, i, r, s) #Calculates the outage duration after local generation is utilized
             else:
                 uBackup = r
             # Check for backup feeders
             connectedBackup = gs.findBackupFeeders(i, backupFeeders)
             if connectedBackup:
                 for j in connectedBackup:
-                    if gs.mainPower(j['otherEnd'], buses, sections, generationData):
+                    if gs.mainPower(j['otherEnd'], buses, sections, generationData): #checks if the backup feeder is connected to the main power source on the opposite end
                         if backupFeeders.at[j['backupFeeder'], 's'] < uBackup:
                             breaker = gs.findProtection(j['otherEnd'], buses, sections)
                             effectsOnSections.append({
@@ -108,7 +110,7 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                                 'loads': gs.findLoadPoints(i, loads),
                                 'time': backupFeeders['s'][j['backupFeeder']]
                             })
-                            if DSEBF:
+                            if DSEBF: #Down Stream Effect of Backup Feeder
                                 if breaker['direction'] == 'D':
                                     endBus = sections['Upstream Bus'][breaker['section']]
                                 else:
@@ -126,7 +128,6 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                                 'loads': gs.findLoadPoints(i, loads),
                                 'time': uBackup
                             })
-                        break
             elif DERS and uBackup < r:
                 # If no backup feeder is available, use local generation
                 effectsOnSections.append({

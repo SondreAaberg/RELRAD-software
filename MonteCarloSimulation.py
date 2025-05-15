@@ -229,11 +229,11 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
 
         # Find the first fault to occur
     fault = minTTF(history)
-    overlap = 0 #test vaiable to test for overlapping faults
+    #overlap = 0 #test vaiable to test for overlapping faults
     while history[fault]['TTF'] < h:
-        # cont if there is an overlapping fault
-        if overlappingFaults(fault, history):
-            overlap += 1
+        #count if there is an overlapping fault
+        #if overlappingFaults(fault, history):
+            #overlap += 1
         # Create deep copies of the original data for analysis
         sectionsCopy = pd.DataFrame(columns=sectionsOriginal.columns,
                                     data=copy.deepcopy(sectionsOriginal.values),
@@ -260,8 +260,8 @@ def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backu
         history[fault]['TTF'] += newTTF + history[fault]['TTR']
         history[fault]['TTR'] = newTTR
         fault = minTTF(history)
-    if overlap > 0:
-        print('overlap', overlap)
+    #if overlap > 0:
+        #print('overlap', overlap)
     return results
 
 

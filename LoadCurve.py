@@ -52,6 +52,8 @@ def createLoadCurve(loadCurveData):
         loadCurve.append(0) # 0 for the last hour of the year to prevent errors
     return loadCurve
 
+
+
 def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
 
     if r is None:
@@ -77,6 +79,7 @@ def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
         if timePoint >= 8736:
             return E
         E += timeList[i] * loadCurve[timePoint] * peakLoad # Energy in MWh
+        
     return E
 
 
@@ -88,20 +91,38 @@ def randomGenerationCurve():
 
 
 
-
     
-def loadCurveDERS(t, r, loadList, loads, loadCurve, generationData, connection, generationCurve, storageCurve = None): 
+def LCandDERScurve(t, r, s, loadList, loads, loadCurve, generationData, connection, generationCurve, storageCurve = None): 
 
     storageCurve = generationCurve.copy() #uses the generation curve = storage curve for simple example
 
 
     if r is None:
         return 0, 0
-
+    
 
     peakLoad = 0
     for load in loadList:
         peakLoad += loads['Load point peak [MW]'][load] # Peak load in MW
+
+    
+    ENS = 0
+    U = 0
+    #Calculates the ammount of energy not served during switchig
+    timeList = []
+    timeList.append(1-t%1)
+    for i in range(int(np.floor(s-1+t%1))):
+        timeList.append(1)
+    timeList.append((r-(1-t%1))%1)
+
+    for i in range(len(timeList)):
+        timePoint = int(np.floor(t+i))
+        if timePoint >= 8736:
+            return ENS, U
+        ENS += timeList[i] * loadCurve[timePoint] * peakLoad
+        U += timeList[i]
+    t += s
+    r -= s
 
 
     localGeneration = 0
@@ -127,24 +148,27 @@ def loadCurveDERS(t, r, loadList, loads, loadCurve, generationData, connection, 
     storage = storageCurve[int(np.floor(t))] * energyStorage
 
 
-    ENS = 0
-    U = 0
     for i in range(len(timeList)):
         timePoint = int(np.floor(t+i))
         if timePoint >= 8736:
+            U = min(r, U+s)
             return ENS, U
         if generationCurve[timePoint] * localGeneration > loadCurve[timePoint] * peakLoad:
+            ENS += 0 
+            U += 0
+        elif generationCurve[timePoint] * localGeneration *timeList[i] + storage > loadCurve[timePoint] * peakLoad * timeList[i] and generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad:
+            storage -= loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i]
             ENS += 0
             U += 0
-        elif (generationCurve[timePoint] * localGeneration)*timeList[i] + storage > (loadCurve[timePoint] * peakLoad) * timeList[i] and generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad:
-            storage -= (loadCurve[timePoint] * peakLoad) * timeList[i] - (generationCurve[timePoint] * localGeneration) * timeList[i]
-            ENS += 0
-            U += 0
+        elif generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad and storage > 0:
+            storage = 0
+            ENS += loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i] - storage
+            U += timeList[i] - timeList[i] * storage / (loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i])
         else:
             ENS += timeList[i] * loadCurve[timePoint] * peakLoad
             U += timeList[i]
 
-
+    U = min(r, U+s)
     return ENS, U
 
 

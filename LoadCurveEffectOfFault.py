@@ -46,6 +46,8 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
         if i['s'] > s:
             s = i['s']
 
+    r = max(s, r) #Sets a lower bound  of r at the switching time (mostly error prevention)
+
     # Calculate switching times for each bus
     switchingTimes = {}
     for i in disconnectors:
@@ -98,18 +100,15 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
         else:
             if DERS:
                 if DERScurve:
-                    ENS, uBackup = lc.loadCurveDERS(t, r, gs.findLoadPoints(i, loads), loads, loadCurve, generationData, i , DERScurve)
-
-                    uBackup = min(s+uBackup, r) # adds the swithing time to the backup power outage duration
+                    ENS, uBackup = lc.LCandDERScurve(t, r, s, gs.findLoadPoints(i, loads), loads, loadCurve, generationData, i , DERScurve)
                 else:
                     uBackup = gf.loadCurveDistributedGeneration(
-                            lc.loadCurveSumEnergy(t, r, gs.findLoadPoints(i, loads), loads, loadCurve),
-                            lc.loadPeak(t, r, gs.findLoadPoints(i, loads), loads, loadCurve),
+                            lc.loadCurveSumEnergy(t+s, r-s, gs.findLoadPoints(i, loads), loads, loadCurve),
+                            lc.loadPeak(t+s, r-s, gs.findLoadPoints(i, loads), loads, loadCurve),
                             generationData, 
                             i, 
-                            r) #Calculates the outage duration after local generation is utilized
-                    
-                    uBackup = min(s+uBackup, r) # adds the swithing time to the backup power outage duration
+                            r,
+                            s) #Calculates the outage duration after local generation is utilized
             else:
                 uBackup = r
             
@@ -154,7 +153,6 @@ def loadCurveFaultEffects(fault, component, buses, sections, loads, generationDa
                                     'time': uBackup,
                                     'ENS': lc.loadCurveSumEnergy(t, uBackup, gs.findLoadPoints(i, loads), loads, loadCurve)
                                 })
-                        break
             elif DERS and uBackup < r:
                 # If no backup feeder is available, use local generation
                 if DERScurve:

@@ -2,37 +2,78 @@ import numpy as np
 import random as rng
 
 
-def distributedGeneration(loads, generation, connection, u):
-    powerNeded = 0
-    energyNeeded = 0
-    energyAvailable = 0
+def distributedGeneration(loads, generationData, connection, r, s):
+
+
     powerAvailable = 0
-
+    energyStorage = 0
+    powerNeeded = 0
+    energyNeeded = 0
     for i in connection:
+        if i in generationData.index:
+            if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
+                powerAvailable += generationData['Lim MW'][i]
+                energyNeeded -= generationData['Lim MW'][i] * (r-s)
+            elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
+                energyStorage += generationData['E cap'][i]
+                powerAvailable += generationData['Lim MW'][i]
         if i in loads.index:
-            powerNeded += loads['Load point peak [MW]'][i]
-            energyNeeded += loads['Load level average [MW]'][i] * u
-        if i in generation.index:
-            powerAvailable += generation['Lim MW'][i]
-            if generation['E cap'][i] > 0:
-                energyAvailable += generation['E cap'][i]
-            else:
-                energyAvailable += generation['Lim MW'][i] * u
+            #print('i in loads.index', i)
+            powerNeeded += loads['Load point peak [MW]'][i]
+            energyNeeded += loads['Load level average [MW]'][i] * (r-s)
+
+    #print('powerNeded', powerNeded)
+    #print('energyNeeded', energyNeeded)
+    #print('powerAvailable', powerAvailable)
+    #print('energyAvailable', energyAvailable)
 
 
-    if energyAvailable > energyNeeded and powerAvailable > powerNeded:
+    if energyStorage > energyNeeded and powerAvailable > powerNeeded:
         return 0
     else:
-        if powerAvailable > powerNeded:
-            return u*(energyAvailable/energyNeeded)
+        if powerAvailable > powerNeeded and energyNeeded > 0:
+            u = (r-s) - (r-s)*(energyStorage/energyNeeded)
+            return min(r, u+s)
         else:
-            return u
+            return r
         
 
-def loadCurveDistributedGeneration(energyNeeded, peakPowerNeeded, generation, connection, u):
-    energyAvailable = 0
+def loadCurveDistributedGeneration(energyNeeded, powerNeeded, generationData, connection, r, s):
+    #energyAvailable = 0
+    #powerAvailable = 0
+
     powerAvailable = 0
-    
+    energyStorage = 0
+    energyNeeded = 0
+    for i in connection:
+        if i in generationData.index:
+            if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
+                powerAvailable += generationData['Lim MW'][i]
+                powerNeeded -= generationData['Lim MW'][i] * (r-s)
+            elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
+                energyStorage += generationData['E cap'][i]
+                powerAvailable += generationData['Lim MW'][i]
+
+
+    #print('powerNeded', powerNeded)
+    #print('energyNeeded', energyNeeded)
+    #print('powerAvailable', powerAvailable)
+    #print('energyAvailable', energyAvailable)
+
+
+    if energyStorage > energyNeeded and powerAvailable > powerNeeded:
+        return 0
+    else:
+        if powerAvailable > powerNeeded and energyNeeded > 0:
+            u = (r-s) - (r-s)*(energyStorage/energyNeeded)
+            return min(r, u+s)
+        else:
+            return r
+
+
+
+
+    '''
     for i in connection:
         if i in generation.index:
             if generation['E cap'][i] > 0:
@@ -40,16 +81,108 @@ def loadCurveDistributedGeneration(energyNeeded, peakPowerNeeded, generation, co
                 energyAvailable += generation['E cap'][i]
             else:
                 powerAvailable += generation['Lim MW'][i]
-                energyAvailable += generation['Lim MW'][i] * u
+                energyAvailable += generation['Lim MW'][i] * r
 
 
     if energyAvailable >= energyNeeded and powerAvailable >= peakPowerNeeded:
         return 0
+    elif energyNeeded == 0:
+        return 0
     elif energyNeeded > 0 and powerAvailable >= peakPowerNeeded:
-        return u*(energyAvailable/energyNeeded)
+        u = (r - (r*(energyAvailable/energyNeeded)))
+        return min(r, u + s)
     else:
         return 0
-            
+    '''
+
+
+
+def distributedGenerationNoPeak(loads, generationData, connection, r, s):
+
+
+    energyStorage = 0
+    energyNeeded = 0
+    for i in connection:
+        if i in generationData.index:
+            if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
+                energyNeeded -= generationData['Lim MW'][i] * (r-s)
+            elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
+                energyStorage += generationData['E cap'][i]
+        if i in loads.index:
+            #print('i in loads.index', i)
+            energyNeeded += loads['Load level average [MW]'][i] * (r-s)
+
+    #print('powerNeded', powerNeded)
+    #print('energyNeeded', energyNeeded)
+    #print('powerAvailable', powerAvailable)
+    #print('energyAvailable', energyAvailable)
+
+
+    if energyNeeded <= 0:
+        return 0
+    if energyStorage > energyNeeded:
+        return 0
+    else:
+        u = (r-s) - (r-s)*(energyStorage/energyNeeded)
+        return min(r, u+s)
+
+
+
+
+def loadCurveDistributedGenerationNoPeak(energyNeeded, generationData, connection, r, s):
+
+    energyStorage = 0
+    energyNeeded = 0
+    for i in connection:
+        if i in generationData.index:
+            if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
+                energyNeeded -= generationData['Lim MW'][i] * (r-s)
+            elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
+                energyStorage += generationData['E cap'][i]
+
+
+    #print('powerNeded', powerNeded)
+    #print('energyNeeded', energyNeeded)
+    #print('powerAvailable', powerAvailable)
+    #print('energyAvailable', energyAvailable)
+
+
+    if energyNeeded <= 0:
+        return 0
+    if energyStorage > energyNeeded:
+        return 0
+    else:
+        u = (r-s) - (r-s)*(energyStorage/energyNeeded)
+        return min(r, u+s)
+
+
+
+
+
+    '''
+    for i in connection:
+        if i in generation.index:
+            if generation['E cap'][i] > 0:
+                powerAvailable += generation['Lim MW'][i]
+                energyAvailable += generation['E cap'][i]
+            else:
+                powerAvailable += generation['Lim MW'][i]
+                energyAvailable += generation['Lim MW'][i] * r
+
+
+    if energyAvailable >= energyNeeded and powerAvailable >= peakPowerNeeded:
+        return 0
+    elif energyNeeded == 0:
+        return 0
+    elif energyNeeded > 0 and powerAvailable >= peakPowerNeeded:
+        u = (r - (r*(energyAvailable/energyNeeded)))
+        return min(r, u + s)
+    else:
+        return 0
+    '''
+
+
+
 
 
 #this PV function is not fully implemented, but is an example of how the PV function from Enevoldsen2021 would be coded
