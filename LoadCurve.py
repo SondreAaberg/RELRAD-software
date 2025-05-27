@@ -145,7 +145,7 @@ def LCandDERScurve(t, r, s, loadList, loads, loadCurve, generationData, connecti
     timeList.append((r-(1-t%1))%1)
 
 
-    storage = storageCurve[int(np.floor(t))] * energyStorage
+    storage = storageCurve[int(np.floor(t-s))] * energyStorage
 
 
     for i in range(len(timeList)):

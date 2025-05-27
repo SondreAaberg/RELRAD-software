@@ -21,6 +21,7 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False):
     busesOriginal = mf.fixbuses(buses, sections)
     sectionsOriginal = mf.calcFailRates(sections, components)
     '''
+    
     # Create a list of all components in the system
     componentList = []
     for sec in system['sections'].index:

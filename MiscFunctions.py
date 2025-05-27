@@ -13,7 +13,7 @@ def fixbuses(buses, sections):
         sections (DataFrame): Data about sections in the system.
 
     Returns:
-        DataFrame: Updated buses DataFrame.
+        DataFrame: Updated buses DataFrame with populated connectivity information.
     """
     for bus_id, _ in buses.iterrows():
         upstream_section = 0
@@ -31,36 +31,99 @@ def fixbuses(buses, sections):
 
 
 def calcFailRates(sections, components):
+    """
+    Calculates and assigns failure rates and component properties for each section.
+    
+    Args:
+        sections (DataFrame): Contains section data including cable types and transformers
+        components (DataFrame): Contains reliability data (λ, r, s values) for each component type
+    
+    Returns:
+        DataFrame: Updated sections with calculated failure rates and component properties
+    """
     for i, row in sections.iterrows():
+        # Dictionary to store component properties for this section
         secComponents = {}
-        secComponents['line'] = {'type': sections['Cable Type'][i], 'length': sections['Length'][i], 'lambda': components['lambda'][sections['Cable Type'][i]] * sections['Length'][i], 'r': components['r'][sections['Cable Type'][i]], 's': components['s'][sections['Cable Type'][i]]}
+        
+        # Calculate line (cable) properties including length-dependent failure rate
+        secComponents['line'] = {
+            'type': sections['Cable Type'][i],
+            'length': sections['Length'][i],
+            'lambda': components['lambda'][sections['Cable Type'][i]] * sections['Length'][i],  # Failure rate per year
+            'r': components['r'][sections['Cable Type'][i]],  # Repair time in hours
+            's': components['s'][sections['Cable Type'][i]]   # Switching time in hours
+        }
+        
+        # Add transformer properties if section contains transformers
         if sections['Nr Transformers'][i]:
-            secComponents['transformer'] = {'type': sections['Transformer Type'][i], 'lambda': components['lambda'][sections['Transformer Type'][i]] * sections['Nr Transformers'][i], 'r': components['r'][sections['Transformer Type'][i]], 's': components['s'][sections['Transformer Type'][i]]}
-        #if sections['Nr Breaker'][i]:
-            #sections.iloc[i,'lambda'] += components['lambda'][sections['Breaker Type'][i]] * sections['Nr Breaker'][i]
+            secComponents['transformer'] = {
+                'type': sections['Transformer Type'][i],
+                'lambda': components['lambda'][sections['Transformer Type'][i]] * sections['Nr Transformers'][i],
+                'r': components['r'][sections['Transformer Type'][i]],
+                's': components['s'][sections['Transformer Type'][i]]
+            }
+        
+        # Update section properties
         sections['s'][i] = components['s'][sections['Cable Type'][i]]
         sections['Components'][i] = secComponents
     return sections
 
-
-
-def GenerateHistory (l, r):
-    TTF = (-1/l) * np.log(rng.uniform(0,0.999)) * 8736
-    TTR = -r * np.log(rng.uniform(0,0.999))
+def GenerateHistory(l, r):
+    """
+    Generates random Time To Failure (TTF) and Time To Repair (TTR) using exponential distribution.
+    
+    Args:
+        l (float): Failure rate (lambda) in failures per year
+        r (float): Mean repair time in hours
+    
+    Returns:
+        tuple: (TTF in hours, TTR in hours)
+    """
+    # Generate TTF using inverse transform sampling
+    # 8736 converts from years to hours (365.25 * 24 = 8736)
+    TTF = (-1/l) * np.log(rng.uniform(0, 0.999)) * 8736
+    
+    # Generate TTR using exponential distribution
+    TTR = -r * np.log(rng.uniform(0, 0.999))
     return TTF, TTR
 
-
 def minTTF(history):
-            TTFcomponent = next(iter(history))
-            TTF = history[TTFcomponent]['TTF']
-            for secComp in history:
-                if history[secComp]['TTF'] < TTF:
-                    TTFcomponent = secComp
-                    TTF = history[secComp]['TTF']
-            return TTFcomponent
-
+    """
+    Finds the component with the earliest Time To Failure in the failure history.
+    
+    Args:
+        history (dict): Dictionary containing failure history for all components
+            Keys: Component IDs
+            Values: Dictionary containing TTF, TTR, and other component properties
+    
+    Returns:
+        str: ID of the component with the minimum TTF
+    """
+    # Initialize with the first component's TTF
+    TTFcomponent = next(iter(history))
+    TTF = history[TTFcomponent]['TTF']
+    
+    # Find component with minimum TTF
+    for secComp in history:
+        if history[secComp]['TTF'] < TTF:
+            TTFcomponent = secComp
+            TTF = history[secComp]['TTF']
+    return TTFcomponent
 
 def MonteCarloYear(sectionsOriginal, busesOriginal, loads, generationData, backupFeeders):
+    """
+    Simulates one year of system operation using Monte Carlo method.
+    
+    Args:
+        sectionsOriginal (DataFrame): Original section data
+        busesOriginal (DataFrame): Original bus data
+        loads (DataFrame): Load point data
+        generationData (dict): Generation system parameters
+        backupFeeders (list): Available backup feeders
+    
+    Returns:
+        dict: Results containing number of faults and unavailability for each load point
+    """
     h = 8736  # Total hours in a year
     results = {}
     for i in loads.index:

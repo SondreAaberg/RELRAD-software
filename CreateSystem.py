@@ -80,12 +80,16 @@ def fixbuses(buses, sections):
 def calcFailRates(sections, components):
     for i, row in sections.iterrows():
         secComponents = {}
-        secComponents['line'] = {'type': sections['Cable Type'][i], 'length': sections['Length'][i], 'lambda': components['lambda'][sections['Cable Type'][i]] * sections['Length'][i], 'r': components['r'][sections['Cable Type'][i]], 's': components['s'][sections['Cable Type'][i]]}
+        if sections['Cable Type'][i]:
+            secComponents['line'] = {'type': sections['Cable Type'][i], 'length': sections['Length'][i], 'lambda': components['lambda'][sections['Cable Type'][i]] * sections['Length'][i], 'r': components['r'][sections['Cable Type'][i]], 's': components['s'][sections['Cable Type'][i]]}
+            sections['s'][i] = components['s'][sections['Cable Type'][i]]
+        else:
+            secComponents['line'] = {'type': 'None', 'length': 0, 'lambda': 0, 'r': 0, 's': 0}
+            sections['s'][i] = 0
         if sections['Nr Transformers'][i]:
             secComponents['transformer'] = {'type': sections['Transformer Type'][i], 'lambda': components['lambda'][sections['Transformer Type'][i]] * sections['Nr Transformers'][i], 'r': components['r'][sections['Transformer Type'][i]], 's': components['s'][sections['Transformer Type'][i]]}
         #if sections['Nr Breaker'][i]:
             #sections.iloc[i,'lambda'] += components['lambda'][sections['Breaker Type'][i]] * sections['Nr Breaker'][i]
-        sections['s'][i] = components['s'][sections['Cable Type'][i]]
         sections['Components'][i] = secComponents
     return sections
 
