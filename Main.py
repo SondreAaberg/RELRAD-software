@@ -47,7 +47,7 @@ rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTest.xlsx', DSEBF = False, DERS
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_LoadCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERS=False)
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERS.xlsx', beta=0.02, DSEBF = False, LoadCurve=False, DERS=True)
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_LoadCurveDERS.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERS=True)
-mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERSCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERScurve=True, DERS=True)
+#mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERSCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERScurve=True, DERS=True)
 
 #rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx', DSEBF = False, DERS = False)
 #rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214DERS.xlsx', DSEBF = False, DERS = True)

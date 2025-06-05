@@ -78,6 +78,14 @@ def fixbuses(buses, sections):
 
 
 def calcFailRates(sections, components):
+    """    
+    Calculates failure rates for each section based on the components used.
+    Args:
+        sections (DataFrame): Data about sections in the system.
+        components (DataFrame): Data about components used in the system.
+    Returns:
+        DataFrame: Updated sections DataFrame with failure rates.
+    """
     for i, row in sections.iterrows():
         secComponents = {}
         if sections['Cable Type'][i]:
@@ -88,7 +96,7 @@ def calcFailRates(sections, components):
             sections['s'][i] = 0
         if sections['Nr Transformers'][i]:
             secComponents['transformer'] = {'type': sections['Transformer Type'][i], 'lambda': components['lambda'][sections['Transformer Type'][i]] * sections['Nr Transformers'][i], 'r': components['r'][sections['Transformer Type'][i]], 's': components['s'][sections['Transformer Type'][i]]}
-        #if sections['Nr Breaker'][i]:
+        #if sections['Nr Breaker'][i]: #if relaiability of breakes is to be included, uncomment this line
             #sections.iloc[i,'lambda'] += components['lambda'][sections['Breaker Type'][i]] * sections['Nr Breaker'][i]
         sections['Components'][i] = secComponents
     return sections

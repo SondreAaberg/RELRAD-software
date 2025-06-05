@@ -43,26 +43,6 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
     testingU = []
     testingF = [] 
 
-    '''
-    #testing loop 1:
-    for i in system['sections'].index:
-        for comp in system['sections']['Components'][i]:
-            system['sections']['Components'][i][comp]['lambda'] *= 10 #increase failure rates by 10x for testing purposes
-    for i in range(1):
-        results, ENS = LoadCurveMonteCarloYear(system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], loadCurve, DERScurve, DSEBF=DSEBF, DERS = DERS)
-        print('results:', results)
-        print('ENS:', ENS)
-    '''
-    
-    ''''
-    #testing loop 2:
-    for i in system['sections'].index:
-        for comp in system['sections']['Components'][i]:
-            system['sections']['Components'][i][comp]['lambda'] *= 10 #increase failure rates by 10x for testing purposes
-    for i in range(1):
-        results = MonteCarloYear(system['sections'], system['buses'], system['loads'], system['generationData'], system['backupFeeders'], loadCurve, DSEBF=DSEBF, DERS = DERS)
-        print('results:', results)
-    '''
 
     if LoadCurve:
         ENS = 0
@@ -72,14 +52,11 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
             with lock:
                 for future in futures:
                     results, yearlyENS = future.result()
-                    #for LP in results:
-                        #yealyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
                     ENS += yearlyENS
                     EENS.append(yearlyENS)
                     for i in system['loads'].index:
                         system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
                         system['loads'].at[i,'U'] += results[i]['U']
-                        #system['loads'].at[i,'ENS'] += results[i]['ENS']
 
     else:
         # Perform Monte Carlo simulation for n years (multithreaded)
@@ -88,23 +65,17 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
             with lock:
                 for future in futures:
                     yearlyEENS = 0
-                    #testSumU = 0
-                    #testSumF = 0
                     results = future.result()
                     for LP in results:
                         yearlyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
-                        #testSumU += results[LP]['U']
-                        #testSumF += results[LP]['nrOfFaults']
                     EENS.append(yearlyEENS)
-                    #testingU.append(testSumU)
-                    #testingF.append(testSumF)
                     for i in system['loads'].index:
                         system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
                         system['loads'].at[i,'U'] += results[i]['U']
 
     EENS = np.array(EENS)
 
-    #n2 = vc.calculate_iterations(CL, np.std(EENS), beta)  # Calculate number of simulations needed for desired confidence level and margin of error
+    
     n2 = vc.calcNumberOfSimulations(EENS, beta)  # Calculate number of simulations needed for desired variance
 
     #n2 = int(np.ceil(float(n2)*1.25))  # Increase number of simulations to 1.25 times the calculated value to compensate for inaccuracy in variance calculation (optional, should not be nessecary)
@@ -123,14 +94,12 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
                 with lock:
                     for future in futures:
                         results, yearlyENS = future.result()
-                        #for LP in results:
-                            #yearlyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
                         ENS += yearlyENS
                         EENS = np.append(EENS, yearlyENS)
                         for i in system['loads'].index:
                             system['loads'].at[i,'nrOfFaults'] += results[i]['nrOfFaults']
                             system['loads'].at[i,'U'] += results[i]['U']
-                            #system['loads'].at[i,'ENS'] += results[i]['ENS']
+
         else:
         # Perform Monte Carlo simulation for n years (multithreaded)
             with ThreadPoolExecutor() as executor:
@@ -138,64 +107,16 @@ def MonteCarlo(loc, outFile, beta = 0.05, nCap = 0, DSEBF = True, DERS = False, 
                 with lock:
                     for future in futures:
                         yearlyEENS = 0
-                        #testSumU = 0
-                        #testSumF = 0
                         results = future.result()
                         for LP in results:
                             yearlyEENS += results[LP]['U'] * system['loads'].at[LP, 'Load level average [MW]']
-                            #testSumU += results[LP]['U']
-                            #testSumF += results[LP]['nrOfFaults']
                         EENS = np.append(EENS, yearlyEENS)
-                        #testingU.append(testSumU)
-                        #testingF.append(testSumF)
                         for i in system['loads'].index:
                             system['loads'].at[i, 'nrOfFaults'] += results[i]['nrOfFaults']
                             system['loads'].at[i,'U'] += results[i]['U']
     
     trueBeta = vc.calcBeta(EENS)  # Calculate the beta value for the EENS values
 
-    '''
-    testingU = np.array(testingU)
-    testingF = np.array(testingF)
-    convUplot = []
-    convFplot = []
-    convEENSplot = []
-    #testing convergence
-    for i in range(len(testingU)):
-        convUplot.append(sum(testingU[:i+1]) / (i+1))
-        convFplot.append(sum(testingF[:i+1]) / (i+1))
-        convEENSplot.append(sum(EENS[:i+1]) / (i+1))
-
-
-
-    plt.plot(convEENSplot, label='Convergence of EENS')
-    plt.axhline(convEENSplot[-1], color = 'r',label='Final EENS value = ' + str(round(convEENSplot[-1], 2)))
-    plt.xlabel('Number of simulations = ' + str(n1 + n2))
-    plt.ylabel('Avg. EENS [MWh/year]')
-    plt.title('Convergence of EENS over simulations')
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-
-    plt.plot(convUplot, label='Convergence of avg. yearly sum of LP unavailability')
-    plt.axhline(convUplot[-1], color = 'r',label='Final U value = ' + str(round(convUplot[-1], 2)))
-    plt.xlabel('Number of simulations = ' + str(n1 + n2))
-    plt.ylabel('Avg. unavailability [h]')
-    plt.title('Convergence of U over simulations')
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-    plt.plot(convFplot, label='Convergence of nr Of Faults pr. Year')
-    plt.axhline(convFplot[-1], color = 'r', label='Final avg nr. Of Faults pr. year = ' + str(round(convFplot[-1], 2)))
-    plt.xlabel('Number of simulations = ' + str(n1 + n2))
-    plt.ylabel('Average Nr. Of Faults pr. Year')
-    plt.title('Convergence of Nr. Of Faults pr. Year over simulations')
-    plt.legend()
-    plt.grid()
-    plt.show()
-    '''
 
     if LoadCurve:
         for LP in system['loads'].index:

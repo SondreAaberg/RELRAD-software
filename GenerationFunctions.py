@@ -3,45 +3,67 @@ import random as rng
 
 
 def distributedGeneration(loads, generationData, connection, r, s):
+    """
+    Calculates the outage duration considering local distributed generation resources.
+    
+    Args:
+        loads (DataFrame): Load point data including peak and average power demands
+        generationData (DataFrame): Generation sources data including power limits and energy capacity
+        connection (list): List of connected nodes (loads and generators)
+        r (float): Total repair time in hours
+        s (float): Switching time in hours
+    
+    Returns:
+        float: Updated outage duration after considering distributed generation
+    """
+    # Initialize power and energy variables
+    powerAvailable = 0    # Total power available from generators
+    energyStorage = 0     # Total energy storage capacity
+    powerNeeded = 0       # Total peak power demand
+    energyNeeded = 0      # Total energy demand during outage
 
-
-    powerAvailable = 0
-    energyStorage = 0
-    powerNeeded = 0
-    energyNeeded = 0
+    # Calculate available resources and needed power/energy
     for i in connection:
         if i in generationData.index:
+            # Handle generators without storage
             if generationData['Lim MW'][i] > 0 and generationData['E cap'][i] == 0:
                 powerAvailable += generationData['Lim MW'][i]
-                energyNeeded -= generationData['Lim MW'][i] * (r-s)
+                energyNeeded -= generationData['Lim MW'][i] * (r-s)  # Subtract constant generation
+            # Handle generators with storage
             elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
                 energyStorage += generationData['E cap'][i]
                 powerAvailable += generationData['Lim MW'][i]
+        # Calculate load requirements
         if i in loads.index:
-            #print('i in loads.index', i)
             powerNeeded += loads['Load point peak [MW]'][i]
             energyNeeded += loads['Load level average [MW]'][i] * (r-s)
 
-    #print('powerNeded', powerNeeded)
-    #print('energyNeeded', energyNeeded)
-    #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyStorage)
-
-
+    # Determine outage duration based on available resources
     if energyStorage > energyNeeded and powerAvailable > powerNeeded:
-        return s
+        return s  # Only switching time if enough power and energy available
     else:
         if powerAvailable > powerNeeded and energyNeeded > 0:
+            # Calculate partial outage duration based on energy storage ratio
             u = (r-s) - (r-s)*(energyStorage/energyNeeded)
             return min(r, u+s)
         else:
-            return r
-        
+            return r  # Full outage duration if insufficient resources
 
 def loadCurveDistributedGeneration(energyNeeded, powerNeeded, generationData, connection, r, s):
-    #energyAvailable = 0
-    #powerAvailable = 0
-
+    """
+    Calculates outage duration using load curve data and distributed generation.
+    
+    Args:
+        energyNeeded (float): Total energy demand during outage [MWh]
+        powerNeeded (float): Peak power demand [MW]
+        generationData (DataFrame): Generation sources data
+        connection (list): List of connected nodes
+        r (float): Repair time [hours]
+        s (float): Switching time [hours]
+    
+    Returns:
+        float: Updated outage duration considering load curve and DG
+    """
     powerAvailable = 0
     energyStorage = 0
     energyNeeded = 0
@@ -55,12 +77,6 @@ def loadCurveDistributedGeneration(energyNeeded, powerNeeded, generationData, co
                 powerAvailable += generationData['Lim MW'][i]
 
 
-    #print('powerNeded', powerNeeded)
-    #print('energyNeeded', energyNeeded)
-    #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyStorage)
-
-
     if energyStorage > energyNeeded and powerAvailable > powerNeeded:
         return s
     else:
@@ -73,33 +89,11 @@ def loadCurveDistributedGeneration(energyNeeded, powerNeeded, generationData, co
 
 
 
-    '''
-    for i in connection:
-        if i in generation.index:
-            if generation['E cap'][i] > 0:
-                powerAvailable += generation['Lim MW'][i]
-                energyAvailable += generation['E cap'][i]
-            else:
-                powerAvailable += generation['Lim MW'][i]
-                energyAvailable += generation['Lim MW'][i] * r
-
-
-    if energyAvailable >= energyNeeded and powerAvailable >= peakPowerNeeded:
-        return 0
-    elif energyNeeded == 0:
-        return 0
-    elif energyNeeded > 0 and powerAvailable >= peakPowerNeeded:
-        u = (r - (r*(energyAvailable/energyNeeded)))
-        return min(r, u + s)
-    else:
-        return 0
-    '''
-
-
-
 def distributedGenerationNoPeak(loads, generationData, connection, r, s):
-
-
+    """
+    Calculates outage duration without considering peak power constraints.
+    Only considers energy constraints from storage systems.
+    """
     energyStorage = 0
     energyNeeded = 0
     for i in connection:
@@ -109,15 +103,7 @@ def distributedGenerationNoPeak(loads, generationData, connection, r, s):
             elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
                 energyStorage += generationData['E cap'][i]
         if i in loads.index:
-            #print('i in loads.index', i)
             energyNeeded += loads['Load level average [MW]'][i] * (r-s)
-
-    #print('powerNeded', powerNeded)
-    #print('energyNeeded', energyNeeded)
-    #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyAvailable)
-
-
 
     if energyStorage > energyNeeded:
         return s
@@ -129,7 +115,19 @@ def distributedGenerationNoPeak(loads, generationData, connection, r, s):
 
 
 def loadCurveDistributedGenerationNoPeak(energyNeeded, generationData, connection, r, s):
-
+    """
+    Calculates outage duration using load curve data without considering peak power constraints.
+    
+    Args:
+        energyNeeded (float): Total energy demand during outage [MWh]
+        generationData (DataFrame): Generation sources data
+        connection (list): List of connected nodes
+        r (float): Repair time [hours]
+        s (float): Switching time [hours]
+    
+    Returns:
+        float: Updated outage duration considering load curve and energy constraints
+    """
     energyStorage = 0
     energyNeeded = 0
     for i in connection:
@@ -138,12 +136,6 @@ def loadCurveDistributedGenerationNoPeak(energyNeeded, generationData, connectio
                 energyNeeded -= generationData['Lim MW'][i] * (r-s)
             elif generationData['Lim MW'][i] > 0 and generationData['E cap'][i] > 0:
                 energyStorage += generationData['E cap'][i]
-
-
-    #print('powerNeded', powerNeded)
-    #print('energyNeeded', energyNeeded)
-    #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyAvailable)
 
 
     if energyNeeded <= 0:
@@ -158,57 +150,50 @@ def loadCurveDistributedGenerationNoPeak(energyNeeded, generationData, connectio
 
 
 
-    '''
-    for i in connection:
-        if i in generation.index:
-            if generation['E cap'][i] > 0:
-                powerAvailable += generation['Lim MW'][i]
-                energyAvailable += generation['E cap'][i]
-            else:
-                powerAvailable += generation['Lim MW'][i]
-                energyAvailable += generation['Lim MW'][i] * r
 
 
-    if energyAvailable >= energyNeeded and powerAvailable >= peakPowerNeeded:
-        return 0
-    elif energyNeeded == 0:
-        return 0
-    elif energyNeeded > 0 and powerAvailable >= peakPowerNeeded:
-        u = (r - (r*(energyAvailable/energyNeeded)))
-        return min(r, u + s)
-    else:
-        return 0
-    '''
-
-
-
-
-
-#this PV function is not fully implemented, but is an example of how the PV function from Enevoldsen2021 would be coded
 def PV(t, Pr, R_c, G_std, G_max, LDI):
-    month = t/(8736*30)
+    """
+    Simulates photovoltaic (PV) power production based on time and environmental factors.
+    Implementation based on Enevoldsen2021.
+    
+    Args:
+        t (float): Time in hours
+        Pr (float): Rated power of PV system [MW]
+        R_c (float): Critical radiation level
+        G_std (float): Standard radiation level
+        G_max (float): Maximum radiation level
+        LDI (list): Monthly light distribution index
+    
+    Returns:
+        float: PV power production [MW]
+    """
+    # Calculate temporal parameters
+    month = t/(8736*30)  # Convert time to months (8736 hours/year)
     day = (month - np.floor(month)) * 30
     hour = (day - np.floor(day)) * 24
 
+    # Adjust hour calculation for edge cases
     if hour == 0 or np.round(hour) == 0:
         hour = 24
     
+    # Round temporal parameters
     month = np.ceil(month)
     day = np.ceil(day)
-    if (hour-np.floor(hour)) < 0.0001:
-        hour = np.round(hour)
-    else:
-        hour = np.ceil(hour)
+    hour = np.ceil(hour) if (hour-np.floor(hour)) >= 0.0001 else np.round(hour)
 
-    f = rng.uniform(0, 1)
-    if hour >= 6 and hour < 18:
+    # Calculate solar radiation based on time of day
+    f = rng.uniform(0, 1)  # Random factor for radiation variation
+    if hour >= 6 and hour < 18:  # Daylight hours
+        # Parabolic radiation curve during day
         G_d = G_max*((-1/36*hour)**2 + 2/(3*hour) - 3)
-        G = (G_d + f)*LDI[month]
+        G = (G_d + f)*LDI[month]  # Apply monthly light distribution
     else:
-        G = 0
+        G = 0  # No radiation at night
 
+    # Calculate PV production based on radiation level
     if G >= 0 and G < R_c:
-        production_PV = Pr * G^2/(G_std * R_c)
+        production_PV = Pr * G**2/(G_std * R_c)
     elif G >= R_c and G <= G_std:
         production_PV = Pr * G/G_std
     else:
@@ -216,7 +201,8 @@ def PV(t, Pr, R_c, G_std, G_max, LDI):
 
     return production_PV
 
+# todo: Implement wind power (WP) generation function
 #def WP():
 
+# todo: Implement battery energy storage system (BESS) function
 #def BESS():
-        

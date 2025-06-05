@@ -29,12 +29,6 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False, createFIM=False):
     # Initialize a DataFrame to store results
     results = pd.DataFrame(index=componentList, columns=LPs)
 
-    
-    #debugging line
-    #effectOnLPs = ef.faultEffects('S2', 0, system['buses'], system['sections'], 
-    #                                system['loads'], system['generationData'], system['backupFeeders'], 
-    #                                system['sections']['Components']['S2']['line']['r'], DSEBF=DSEBF, DERS=DERS)
-    #print('effectOnLPs', effectOnLPs)  # Debugging line
 
 
     # Iterate through each section and component to calculate effects on load points
