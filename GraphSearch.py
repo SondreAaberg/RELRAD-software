@@ -104,7 +104,8 @@ def DFS(bus, buses, sections, connected=[]):
     """
     if bus in connected:
         return connected
-    connected.append(bus)
+    if bus != 0:
+        connected.append(bus)
     for i in buses['Connected Sections'][bus]:
         if i == 0:
             return connected
@@ -166,7 +167,8 @@ def disconnectorsDFS(bus, buses, sections, connected=[], disconnectors=[]):
     """
     if bus in connected:
         return disconnectors
-    connected.append(bus)
+    if bus != 0:
+        connected.append(bus)
     for i in buses['Connected Sections'][bus]:
         if i == 0:
             continue

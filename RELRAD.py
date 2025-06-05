@@ -4,23 +4,13 @@ import CreateSystem as cs
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
-def RELRAD(loc, outFile, DSEBF=True, DERS=False):
+def RELRAD(loc, outFile, DSEBF=True, DERS=False, createFIM=False):
 
+    #create system data
     system = cs.createSystem(loc)
     
-    '''
-    # Load data from Excel files
-    buses = pd.read_excel(loc, 'Bus Data', index_col=0)
-    sections = pd.read_excel(loc, 'Line Data', index_col=0)
-    loads = pd.read_excel(loc, 'Load Point Data', index_col=0)
-    components = pd.read_excel(loc, 'Component Data', index_col=0)
-    backupFeeders = pd.read_excel(loc, 'Backup Feeders', index_col=0)
-    generationData = pd.read_excel(loc, 'Generation Data', index_col=0)
-
-    # Fix buses and calculate failure rates for the original data
-    busesOriginal = mf.fixbuses(buses, sections)
-    sectionsOriginal = mf.calcFailRates(sections, components)
-    '''
+    if createFIM:
+        FIM = pd.DataFrame(columns=system['loads'].index, index=system['sections'].index)
     
     # Create a list of all components in the system
     componentList = []
@@ -39,6 +29,14 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False):
     # Initialize a DataFrame to store results
     results = pd.DataFrame(index=componentList, columns=LPs)
 
+    
+    #debugging line
+    #effectOnLPs = ef.faultEffects('S2', 0, system['buses'], system['sections'], 
+    #                                system['loads'], system['generationData'], system['backupFeeders'], 
+    #                                system['sections']['Components']['S2']['line']['r'], DSEBF=DSEBF, DERS=DERS)
+    #print('effectOnLPs', effectOnLPs)  # Debugging line
+
+
     # Iterate through each section and component to calculate effects on load points
     for sec in system['sections'].index:
         for comp in system['sections']['Components'][sec]:
@@ -52,7 +50,28 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False):
                                      index=system['buses'].index)
             
             # Calculate the effects of faults on load points
-            effectOnLPs = ef.faultEffects(sec, comp, busesCopy, sectionsCopy, system['loads'], system['generationData'], system['backupFeeders'], system['sections']['Components'][sec][comp]['r'], DSEBF=DSEBF, DERS=DERS)
+            
+            if createFIM:
+                effectOnLPs, EOS = ef.faultEffects(sec, comp, busesCopy, sectionsCopy, system['loads'], system['generationData'], system['backupFeeders'], system['sections']['Components'][sec][comp]['r'], DSEBF=DSEBF, DERS=DERS, createFIM = createFIM)
+                for i in EOS:
+                    if i['state'] == 'fault':
+                        for j in i['loads']:
+                            FIM.at[sec, j] = 'F'
+                    elif i['state'] == 'connected':
+                        for j in i['loads']:
+                            if effectOnLPs[j] == 0:
+                                FIM.at[sec, j] = '0'
+                            else:
+                                FIM.at[sec, j] = 'M'
+                    elif i['state'] == 'backupPower':
+                        for j in i['loads']:
+                            FIM.at[sec, j] = 'B'
+                    elif i['state'] == 'noBackup':
+                        for j in i['loads']:
+                            FIM.at[sec, j] = 'N'
+            else:
+                effectOnLPs = ef.faultEffects(sec, comp, busesCopy, sectionsCopy, system['loads'], system['generationData'], system['backupFeeders'], system['sections']['Components'][sec][comp]['r'], DSEBF=DSEBF, DERS=DERS)
+            
             componentTag = sec + comp
             for LP in effectOnLPs:
                 if effectOnLPs[LP] > 0:
@@ -80,3 +99,5 @@ def RELRAD(loc, outFile, DSEBF=True, DERS=False):
     system['loads'].at['TOTAL', 'EENS'] = system['loads']['EENS'].sum()
     # Print and save results        
     system['loads'].to_excel(outFile, sheet_name='Load Points')
+    if createFIM:
+        FIM.to_excel(outFile, sheet_name='FIM')

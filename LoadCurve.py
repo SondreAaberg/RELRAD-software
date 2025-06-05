@@ -49,7 +49,8 @@ def createLoadCurve(loadCurveData):
                 hourlyfactor = 'Winter Wkdy'
  
         loadCurve.append(loadCurveData['weeklyFactor'].at[week, 'Load Factor']/100 * loadCurveData['dailyFactor'].at[day, 'Load Factor']/100 * loadCurveData['hourlyFactor'].at[hour, hourlyfactor]/100) # (Factors are given in %.)
-        loadCurve.append(0) # 0 for the last hour of the year to prevent errors
+    loadCurve.append(0) #failure prevention
+    loadCurve.append(0)
     return loadCurve
 
 
@@ -68,10 +69,10 @@ def loadCurveSumEnergy(t, r, loadList, loads, loadCurve):
     #creates a list of the length of time the load is in each of the load curve points
     # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
     timeList = []
-    timeList.append(1-t%1)
-    for i in range(int(np.floor(r-1+t%1))):
+    timeList.append(min(1-t%1, r))
+    for i in range(int(np.floor(r-min(1-t%1, r)))):
         timeList.append(1)
-    timeList.append((r-(1-t%1))%1)
+    timeList.append(min((r-(1-t%1))%1, (r-min(1-t%1, r))%1))
 
 
     for i in range(len(timeList)):
@@ -110,10 +111,10 @@ def LCandDERScurve(t, r, s, loadList, loads, loadCurve, generationData, connecti
     U = 0
     #Calculates the ammount of energy not served during switchig
     timeList = []
-    timeList.append(1-t%1)
-    for i in range(int(np.floor(s-1+t%1))):
+    timeList.append(min(1-t%1, s))
+    for i in range(int(np.floor(s-min(1-t%1, s)))):
         timeList.append(1)
-    timeList.append((r-(1-t%1))%1)
+    timeList.append(min((s-(1-t%1))%1, (s-min(1-t%1, s))%1))
 
     for i in range(len(timeList)):
         timePoint = int(np.floor(t+i))
@@ -139,10 +140,10 @@ def LCandDERScurve(t, r, s, loadList, loads, loadCurve, generationData, connecti
     #creates a list of the length of time the load is in each of the load curve points
     # The first element is the time from t to the next full hour, the last element is the time from the last full hour to r
     timeList = []
-    timeList.append(1-t%1)
-    for i in range(int(np.floor(r-1+t%1))):
+    timeList.append(min(1-t%1, r))
+    for i in range(int(np.floor(r-min(1-t%1, r)))):
         timeList.append(1)
-    timeList.append((r-(1-t%1))%1)
+    timeList.append(min((r-(1-t%1))%1, (r-min(1-t%1, r))%1))
 
 
     storage = storageCurve[int(np.floor(t-s))] * energyStorage
@@ -151,24 +152,28 @@ def LCandDERScurve(t, r, s, loadList, loads, loadCurve, generationData, connecti
     for i in range(len(timeList)):
         timePoint = int(np.floor(t+i))
         if timePoint >= 8736:
-            U = min(r, U+s)
+            U = min(r, U)
             return ENS, U
         if generationCurve[timePoint] * localGeneration > loadCurve[timePoint] * peakLoad:
             ENS += 0 
             U += 0
+            #print(1)
         elif generationCurve[timePoint] * localGeneration *timeList[i] + storage > loadCurve[timePoint] * peakLoad * timeList[i] and generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad:
             storage -= loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i]
             ENS += 0
             U += 0
+            #print(2)
         elif generationCurve[timePoint] * localGeneration + storagePower > loadCurve[timePoint] * peakLoad and storage > 0:
             storage = 0
             ENS += loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i] - storage
             U += timeList[i] - timeList[i] * storage / (loadCurve[timePoint] * peakLoad * timeList[i] - generationCurve[timePoint] * localGeneration * timeList[i])
+            #print(3)
         else:
             ENS += timeList[i] * loadCurve[timePoint] * peakLoad
             U += timeList[i]
+            #print(4)
 
-    U = min(r, U+s)
+    U = min(r, U)
     return ENS, U
 
 

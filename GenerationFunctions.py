@@ -22,14 +22,14 @@ def distributedGeneration(loads, generationData, connection, r, s):
             powerNeeded += loads['Load point peak [MW]'][i]
             energyNeeded += loads['Load level average [MW]'][i] * (r-s)
 
-    #print('powerNeded', powerNeded)
+    #print('powerNeded', powerNeeded)
     #print('energyNeeded', energyNeeded)
     #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyAvailable)
+    #print('energyAvailable', energyStorage)
 
 
     if energyStorage > energyNeeded and powerAvailable > powerNeeded:
-        return 0
+        return s
     else:
         if powerAvailable > powerNeeded and energyNeeded > 0:
             u = (r-s) - (r-s)*(energyStorage/energyNeeded)
@@ -55,14 +55,14 @@ def loadCurveDistributedGeneration(energyNeeded, powerNeeded, generationData, co
                 powerAvailable += generationData['Lim MW'][i]
 
 
-    #print('powerNeded', powerNeded)
+    #print('powerNeded', powerNeeded)
     #print('energyNeeded', energyNeeded)
     #print('powerAvailable', powerAvailable)
-    #print('energyAvailable', energyAvailable)
+    #print('energyAvailable', energyStorage)
 
 
     if energyStorage > energyNeeded and powerAvailable > powerNeeded:
-        return 0
+        return s
     else:
         if powerAvailable > powerNeeded and energyNeeded > 0:
             u = (r-s) - (r-s)*(energyStorage/energyNeeded)
@@ -118,10 +118,9 @@ def distributedGenerationNoPeak(loads, generationData, connection, r, s):
     #print('energyAvailable', energyAvailable)
 
 
-    if energyNeeded <= 0:
-        return 0
+
     if energyStorage > energyNeeded:
-        return 0
+        return s
     else:
         u = (r-s) - (r-s)*(energyStorage/energyNeeded)
         return min(r, u+s)
@@ -148,9 +147,9 @@ def loadCurveDistributedGenerationNoPeak(energyNeeded, generationData, connectio
 
 
     if energyNeeded <= 0:
-        return 0
+        return s
     if energyStorage > energyNeeded:
-        return 0
+        return s
     else:
         u = (r-s) - (r-s)*(energyStorage/energyNeeded)
         return min(r, u+s)

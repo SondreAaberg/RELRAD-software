@@ -3,7 +3,7 @@ import GraphSearch as gs
 import MiscFunctions as mf
 import GenerationFunctions as gf
 
-def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, loadCurve=0, DSEBF = True, RNG=False, DERS = False):
+def faultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, r, loadCurve=0, DSEBF = True, RNG=False, DERS = False, createFIM=False):
     """
     Calculates the effects of a fault on the system.
 
@@ -29,15 +29,27 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
     # Trip protection devices and check if the entire system is down
     buses, sections, trippedProtection, fullSystemDown = gs.tripProtection(fault, buses, sections)
 
+    #print('tripped protection', trippedProtection) #Debugging line
+
     # If the entire system is down, return fault duration for all load points
     if fullSystemDown:
         effectsOnLPs = {}
+        effectsOnSections.append({
+            'state': 'fullSystemDown',
+            'loads': loads.index.tolist(),
+            'time': r
+        })
         for i, row in loads.iterrows():
             effectsOnLPs[i] = r
-        return effectsOnLPs
+        if createFIM:
+            return effectsOnLPs, effectsOnSections
+        else:
+            return effectsOnLPs
 
     # Isolate the faulted section and identify disconnectors
     buses, sections, disconnectors = gs.disconnect(fault, buses, sections)
+
+    #print('disconnectors:', disconnectors)  #Debugging line
 
     # Determine the maximum switching time among disconnectors
     s = 0
@@ -64,6 +76,8 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
     # Identify all isolated interconnections in the system
     disconnectedSections = gs.findConnectedSegments(buses, sections)
 
+    #print('disconnected sections:', disconnectedSections)  # Debugging line
+
     # Record the effects on disconnected sections
     for i in disconnectedSections:
         effectsOnSections.append({
@@ -75,8 +89,14 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
     # Reconnect protection devices and update the system state
     buses, sections = gs.reconnectProtection(buses, sections, trippedProtection, fault)
 
+    #print('buses after reconnection:', buses)  # Debugging line
+    #print('sections after reconnection:', sections)  # Debugging line
+
     # Identify disconnected sections again after reconnection
+    disconnectedSections = []
     disconnectedSections = gs.findConnectedSegments(buses, sections)
+
+    #print('disconnected sections after reconnection:', disconnectedSections)  # Debugging line
 
     for i in disconnectedSections:
         if sections['Upstream Bus'][fault] in i or sections['Downstream Bus'][fault] in i:
@@ -145,6 +165,8 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
 
     #print('Effects on sections:', effectsOnSections) #Intermediat debugging line
     
+
+
     # Aggregate the effects on load points
     effectsOnLPs = {}
     for i in effectsOnSections:
@@ -161,4 +183,10 @@ def faultEffects(fault, component, buses, sections, loads, generationData, backu
                     effectsOnLPs[LP] = i['time']
 
     # Return the final effects on load points
-    return effectsOnLPs
+
+
+
+    if createFIM:
+        return effectsOnLPs, effectsOnSections
+    else:
+        return effectsOnLPs

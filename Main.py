@@ -12,11 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 #Examples:
 
-#RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx')
-#MonteCarlo('RBMC p214.xlsx', 5000, 'MonteCarloResultsRBMCp214.xlsx')
+#rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx')
+#rr.RELRAD('Myhre 6Bus System.xlsx', 'RELRADResultsMyhre6Bus.xlsx', DSEBF = False, DERS = False)
+#mc.MonteCarlo('Myhre 6Bus System.xlsx', 'MonteCarloResultsMyhre6Bus.xlsx', beta=0.02, DSEBF = False, LoadCurve=False, DERS=False)
 
 #mc.MonteCarlo('BUS 2.xlsx', 'MonteCarloResultsBUS2.xlsx', beta=0.05, DSEBF = False)
-rr.RELRAD('BUS 2.xlsx', 'RELRADResultsBUS2.xlsx', DSEBF = False)
+#rr.RELRAD('BUS 2.xlsx', 'RELRADResultsBUS2.xlsx', DSEBF = False, createFIM=True, DERS=False)
 
 '''
 mc.MonteCarlo('BUS 4.xlsx', 'MonteCarloResultsBUS4.xlsx', beta=0.02, DSEBF = False)
@@ -42,11 +43,19 @@ rr.RELRAD('SimpleTest.xlsx', 'RELRADResultsSimpleTest.xlsx', DSEBF = False, DERS
 #rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214_DERSCase3.xlsx', DSEBF = False, DERS = True)
 
 
-#mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_BaseCase.xlsx', beta=0.05, DSEBF = False, LoadCurve=False, DERS=False)
+#mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_BaseCase.xlsx', beta=0.02, DSEBF = False, LoadCurve=False, DERS=False)
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_LoadCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERS=False)
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERS.xlsx', beta=0.02, DSEBF = False, LoadCurve=False, DERS=True)
 #mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_LoadCurveDERS.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERS=True)
-#mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERSCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERScurve=True, DERS=True)
+mc.MonteCarlo('RBMC p214.xlsx', 'MonteCarloResults_p214_DERSCurve.xlsx', beta=0.02, DSEBF = False, LoadCurve=True, DERScurve=True, DERS=True)
+
+#rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214.xlsx', DSEBF = False, DERS = False)
+#rr.RELRAD('RBMC p214.xlsx', 'RELRADResultsRBMCp214DERS.xlsx', DSEBF = False, DERS = True)
 
 
 #rr.RELRAD('BUS 6.xlsx', 'RELRADResultsBUS6.xlsx', DSEBF = False)
+
+
+
+#rr.RELRAD('BUS 5 RELSAD MOD.xlsx', 'RELRADResultsBUS5.xlsx', DSEBF = False, DERS=False)
+#mc.MonteCarlo('BUS 5 RELSAD MOD.xlsx', 'MonteCarloResultsBUS5.xlsx', beta=0.05, DSEBF = False, LoadCurve=False, DERS=False)
