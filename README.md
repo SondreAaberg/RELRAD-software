@@ -1,4 +1,4 @@
-# Simple-System-for-Power-System-Reliability-Calculations
+# RELRAD-software
 Monte Carlo simulation and RELRAD algorithm for radial systems
 
 
