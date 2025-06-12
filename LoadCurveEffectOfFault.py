@@ -4,6 +4,24 @@ import MiscFunctions as mf
 import GenerationFunctions as gf
 import LoadCurve as lc
 
+'''
+RELRAD-software, general software for reliability studies of radial power systems
+    Copyright (C) 2025  Sondre Modalsli Aaberg
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
+
 def loadCurveFaultEffects(fault, component, buses, sections, loads, generationData, backupFeeders, t, r, loadCurve=0, DERScurve = 0, DSEBF = True, RNG=False, DERS = False):
     """
     Calculates the effects of a fault on the system.
